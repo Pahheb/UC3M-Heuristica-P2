@@ -1,2 +1,21 @@
-- name: Fork Sync
-  uses: tgymnich/fork-sync@v2.0.10
+name: Sync Fork
+
+on:
+  push: # triggers on every push to the main branch
+    branches:
+      - main # change this to your branch name if different
+  schedule:
+    - cron: '0 7 * * *' # runs daily at 7 AM
+  workflow_dispatch: # on manual trigger
+
+jobs:
+  sync:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: tgymnich/fork-sync@v1.8
+        with:
+          owner: llvm
+          base: master
+          head: master
