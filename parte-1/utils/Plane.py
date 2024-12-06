@@ -9,7 +9,8 @@ class Plane():
         self.restriction = restriction
         self.t1_duties = t1_duties
         self.t2_duties = t2_duties
-        self.position = {"x": i, "y": j}
+        self.x = i
+        self.j = j
         
     def __str__(self) -> str:
         output = f"{self.id}-{self.type}-{self.restriction} --- Current T1 Duties: {self.t1_duties}. Current T2 Duties: {self.t2_duties}\n"
