@@ -3,8 +3,8 @@ class SPC_Mechanic():
         self.x = i
         self.y = j
 
-    def __str__(self):
-        return (self.x, self.y)
+    def __repr__(self):
+        return f"SPC_Mechanic(x={self.x}, y={self.y})"
 
     @property
     def i(self):

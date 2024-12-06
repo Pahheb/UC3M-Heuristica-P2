@@ -2,6 +2,11 @@
 This file contains all the function related with file management, processing and more
 """
 
+from utils.Plane import Plane
+from utils.Parking import Parking
+from utils.SPC_Mechanic import SPC_Mechanic
+from utils.STD_Mechanic import STD_Mechanic
+
 import logging
 logger = logging.getLogger(__name__)
 
@@ -20,33 +25,31 @@ def process_initial_file(route: str):
 
     # 3. std mechanic
     std_positions = [
-        tuple(map(int, pos.strip("()").split(",")))
+        STD_Mechanic(*map(int, pos.strip("()").split(",")))
         for pos in lines[2].split(":")[1].strip().split()
     ]
-
     # 4. spc mechanic
     spc_positions = [
-        tuple(map(int, pos.strip("()").split(",")))
+        SPC_Mechanic(*map(int, pos.strip("()").split(",")))
         for pos in lines[3].split(":")[1].strip().split()
     ]
-
-    # 5. parking pos
+    # 5. parking
     prk_positions = [
-        tuple(map(int, pos.strip("()").split(",")))
+        Parking(*map(int, pos.strip("()").split(",")))
         for pos in lines[4].split(":")[1].strip().split()
     ]
-
     # 6. plane data
     planes = []
     for line in lines[5:]:
         plane_data = line.strip().split("-")
-        plane = {
-            "id": int(plane_data[0]),
-            "tipo": plane_data[1],
-            "restr": plane_data[2] == "T",  # True para restricciones tipo 2 antes de tipo 1
-            "t1": int(plane_data[3]),
-            "t2": int(plane_data[4]),
-        }
+        plane = Plane(
+            id = int(plane_data[0]),
+            model = plane_data[1],
+            restriction = plane_data[2] == "T",  # True para restricciones tipo 2 antes de tipo 1
+            t1_duties = int(plane_data[3]),
+            t2_duties = int(plane_data[4]),
+        )
+
         planes.append(plane)
 
     # json structures file
