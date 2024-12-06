@@ -3,6 +3,9 @@ class Parking():
         self.x = i
         self.y = j
         
+    def __str__(self):
+        return (self.x, self.y)
+        
     @property
     def i(self):
         return self._i
