@@ -26,20 +26,56 @@ def main():
     
     problem = Problem()
     logging.info("--- Creation of variable and domain asignation ---")
-    for idx, plane in enumerate(planes):
-        # create a variable name depending on the slot and model, each plane has n slots
-        if plane.model == "STD":
-            for slot in range(slots):
-                variable_name = f"av_{plane.id}_STD_{slot + 1}"
-                if variable_name not in problem._variables:
-                    problem.addVariable(variable_name, planeDomain)
-                    logging.info(f"Variable {variable_name}")
-        elif plane.model == "JMB":
-            for slot in range(slots):
-                variable_name = f"av_{plane.id}_JMB_{slot + 1}"
-                if variable_name not in problem._variables:
-                    problem.addVariable(variable_name, planeDomain)
-                    logging.info(f"Variable {variable_name}")
+    for plane in planes:
+        for slot in range(slots):
+            variable_name = f"av_{plane.id}_{plane.model}_{slot + 1}"
+            problem.addVariable(variable_name, planeDomain)
+            logging.info(f"Variable {variable_name}")
+    
+    # Restricción: En cada franja horaria (slot), ningún avión puede compartir la misma posición
+    for slot in range(slots):
+        slot_variables = [f"av_{plane.id}_{plane.model}_{slot + 1}" for plane in planes]
+        problem.addConstraint(AllDifferentConstraint(), slot_variables)
+        logging.info(f"Restricción AllDifferent añadida para las variables de la franja horaria {slot + 1}: {slot_variables}")
+        
+    # Restricción 1: Hasta 2 aviones por taller
+    for slot in range(slots):
+        for position in std_positions + spc_positions:  # Todas las posiciones de talleres
+            # Variables que ocupan esta posición en esta franja
+            slot_variables = [
+                f"av_{plane.id}_{plane.model}_{slot + 1}"
+                for plane in planes
+            ]
+            
+            # Añadir una restricción que limite el número de aviones en esta posición
+            def max_two_planes(*assigned_positions):
+                return sum(pos == position for pos in assigned_positions) <= 2
+            
+            problem.addConstraint(max_two_planes, slot_variables)
+            logging.info(f"Restricción: Hasta 2 aviones en posición {position} para la franja {slot + 1}")
+
+    # Restricción 2: Máximo 1 avión JUMBO por taller
+    for slot in range(slots):
+        for position in spc_positions:  # Todas las posiciones de talleres
+            # Variables que ocupan esta posición en esta franja
+            slot_variables = [
+                f"av_{plane.id}_{plane.model}_{slot + 1}"
+                for plane in planes if plane.model == "JMB"
+            ]
+            
+            # Añadir una restricción que limite el número de aviones JUMBO a 1
+            def max_one_jumbo(*assigned_positions):
+                return sum(pos == position for pos in assigned_positions) <= 1
+            
+            problem.addConstraint(max_one_jumbo, slot_variables)
+            logging.info(f"Restricción: Máximo 1 avión JUMBO en posición {position} para la franja {slot + 1}")
+
+        
+    logging.info("--- Problem Solver Started ---")
+    solutions = problem.getSolutions()
+    logging.info(f"Número de soluciones encontradas: {len(solutions)}")
+    for solution in solutions:
+        logging.info(solution)
 
 if __name__ == '__main__':
     main()
