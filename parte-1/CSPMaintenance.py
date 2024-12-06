@@ -11,9 +11,9 @@ def main():
     logging.basicConfig(level=logging.INFO)
     routeToInitFile = sys.argv[1]
     data = process_initial_file(route=routeToInitFile)
-    print("Data from the init file has been processed")
+    logging.info("Data from the init file has been processed")
     for key in data.keys():
-        print(f"{key}: ",data[key],"\n")
+        logging.info("%s: %s", key, data[key])
 
     slots = data["franjas"]
     matriz_size = data["matriz_size"]
@@ -25,9 +25,21 @@ def main():
     planeDomain =[(i, j) for i in range(matriz_size[0]) for j in range(matriz_size[1])]
     
     problem = Problem()
-    
-    for plane in planes:
-        problem.addVariable(plane, planeDomain)
+    logging.info("--- Creation of variable and domain asignation ---")
+    for idx, plane in enumerate(planes):
+        # create a variable name depending on the slot and model, each plane has n slots
+        if plane.model == "STD":
+            for slot in range(slots):
+                variable_name = f"av_{plane.id}_STD_{slot + 1}"
+                if variable_name not in problem._variables:
+                    problem.addVariable(variable_name, planeDomain)
+                    logging.info(f"Variable {variable_name}")
+        elif plane.model == "JMB":
+            for slot in range(slots):
+                variable_name = f"av_{plane.id}_JMB_{slot + 1}"
+                if variable_name not in problem._variables:
+                    problem.addVariable(variable_name, planeDomain)
+                    logging.info(f"Variable {variable_name}")
 
 if __name__ == '__main__':
     main()
