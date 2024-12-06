@@ -26,6 +26,25 @@ class Plane:
             f"t1={self.t1_duties}, t2={self.t2_duties}, position=({self.x}, {self.y}))"
         )
 
+    def __hash__(self):
+        return hash(self.id)
+    
+        # Métodos de comparación
+    def __lt__(self, other):
+        return self.id < other.id
+
+    def __le__(self, other):
+        return self.id <= other.id
+
+    def __eq__(self, other):
+        return self.id == other.id
+
+    def __gt__(self, other):
+        return self.id > other.id
+
+    def __ge__(self, other):
+        return self.id >= other.id
+
     @property
     def id(self):
         return self._id
