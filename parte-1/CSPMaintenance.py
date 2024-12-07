@@ -3,11 +3,13 @@ from utils.Map import Map
 
 import sys
 import logging
+import time
 logger = logging.getLogger(__name__)
 
 from constraint import *
 
 def main():
+    st = time.time()
     logging.basicConfig(level=logging.INFO)
     routeToInitFile = sys.argv[1]
     data = process_initial_file(route=routeToInitFile)
@@ -76,6 +78,9 @@ def main():
     logging.info(f"Número de soluciones encontradas: {len(solutions)}")
     for solution in solutions:
         logging.info(solution)
+        
+    end = time.time()
+    logging.info(f"Total time elapsed for calculating the solutions of the problem: {end - st:.4f} seconds")
 
 if __name__ == '__main__':
     main()
