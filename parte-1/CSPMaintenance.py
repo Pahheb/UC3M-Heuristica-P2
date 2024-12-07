@@ -92,6 +92,30 @@ def main():
                 logging.info(f"Restricción de no adyacencia aplicada entre {var1} y {var2}")
 
 
+    # Restricción 3: Si un avión tiene programada una tarea de mantenimiento especialista y otra estándar, 
+    # debe tener asignado al menos un taller especialista en alguna de las franjas horarias
+    for slot in range(slots):
+        for plane in planes:
+            
+            plane_variable = f"av_{plane.id}_{plane.model}_{slot + 1}"
+            planesToWork = []
+            # if t1 && t2 >= 1, then we must apply this restriction
+            if plane.t2_duties >= 1 and plane.t1_duties >= 1:
+                planesToWork.append(plane_variable)
+            
+            def at_least_one_specialist(*assigned_positions):
+                # after some debugging, assigned_position is a tuple such that (i, j),
+                # notice the , after the end of the tuple
+
+                for spc_mechanic in spc_positions:                   
+                    if (spc_mechanic.x, spc_mechanic.y) == assigned_positions[0]: # [0] because of the ,
+                        return True
+                return False
+                
+            problem.addConstraint(at_least_one_specialist, planesToWork)
+            logging.info(f"Restricción aplicada: avión {plane.id} tiene al menos un taller especialista asignado.")
+
+
                             
     logging.info(f"Problem variables: {problem._variables}\n")
     logging.info("--- Problem Solver Started ---")
