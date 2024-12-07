@@ -75,12 +75,11 @@ def main():
         
     logging.info("--- Problem Solver Started ---")
     solutions = problem.getSolutions()
-    logging.info(f"Número de soluciones encontradas: {len(solutions)}")
     for solution in solutions:
         logging.info(solution)
         
     end = time.time()
-    logging.info(f"Total time elapsed for calculating the solutions of the problem: {end - st:.4f} seconds")
+    logging.info(f"Total solutions founded: {len(solutions)}\nTotal time elapsed for calculating the solutions of the problem: {end - st:.4f} seconds")
 
 if __name__ == '__main__':
     main()
