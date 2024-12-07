@@ -34,13 +34,13 @@ def main():
             problem.addVariable(variable_name, planeDomain)
             logging.info(f"Variable {variable_name}")
     
-    # Restricción: En cada franja horaria (slot), ningún avión puede compartir la misma posición
+    # Restricción 1: En cada franja horaria (slot), ningún avión puede compartir la misma posición
     for slot in range(slots):
         slot_variables = [f"av_{plane.id}_{plane.model}_{slot + 1}" for plane in planes]
         problem.addConstraint(AllDifferentConstraint(), slot_variables)
         logging.info(f"Restricción AllDifferent añadida para las variables de la franja horaria {slot + 1}: {slot_variables}")
         
-    # Restricción 1: Hasta 2 aviones por taller
+    # Restricción 2.1: Hasta 2 aviones por taller
     for slot in range(slots):
         for position in std_positions + spc_positions:  # Todas las posiciones de talleres
             # Variables que ocupan esta posición en esta franja
@@ -56,10 +56,10 @@ def main():
             problem.addConstraint(max_two_planes, slot_variables)
             logging.info(f"Restricción: Hasta 2 aviones en posición {position} para la franja {slot + 1}")
 
-    # Restricción 2: Máximo 1 avión JUMBO por taller
+    # Restricción 2.2: Máximo 1 avión JUMBO por taller
     for slot in range(slots):
-        for position in spc_positions:  # Todas las posiciones de talleres
-            # Variables que ocupan esta posición en esta franja
+        for position in spc_positions:  # for all mechanics
+            # variables that are in that position
             slot_variables = [
                 f"av_{plane.id}_{plane.model}_{slot + 1}"
                 for plane in planes if plane.model == "JMB"
