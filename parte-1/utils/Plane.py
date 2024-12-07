@@ -21,7 +21,7 @@ class Plane:
         """
         return (
             f"Plane(id={self.id}, model={self.model}, restr={self.restriction}, "
-            f"t1={self.t1_duties}, t2={self.t2_duties}, position=({self.x}, {self.y}))"
+            f"t1_duties={self.t1_duties}, t2_duties={self.t2_duties})"
         )
 
     def __hash__(self):

@@ -63,13 +63,39 @@ def main():
                 for plane in planes if plane.model == "JMB"
             ]
             problem.addConstraint(lambda *args, pos=position: max_one_jumbo(*args, position=pos), jumbo_variables)
-
+    
+        
+    # Restricción 6: Ningún par de aviones JUMBO puede estar en posiciones adyacentes en la misma franja horaria
+    for slot in range(slots):
+        # for each slot, generate al JMB plane variables
+        jumbo_variables = [
+            f"av_{plane.id}_{plane.model}_{slot + 1}"
+            for plane in planes if plane.model == "JMB"
+        ]
+        
+        for i in range(len(jumbo_variables)):
+            for j in range(i + 1, len(jumbo_variables)):
+                var1 = jumbo_variables[i]
+                var2 = jumbo_variables[j]
                 
+                def no_adjacent_jumbos(*args):
+                    # Obtenemos las posiciones de los dos aviones
+                    pos1 = args[0]
+                    pos2 = args[1]
+                    if pos1 is None or pos2 is None:
+                        return True  # Caso donde no se asignan posiciones
+                    # Verificar si están adyacentes
+                    return not (abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1]) == 1)
+
+                problem.addConstraint(no_adjacent_jumbos, (var1, var2))
+                print("executed")
+                logging.info(f"Restricción de no adyacencia aplicada entre {var1} y {var2}")
+
+
+                            
     logging.info(f"Problem variables: {problem._variables}\n")
     logging.info("--- Problem Solver Started ---")
     solutions = problem.getSolutions()
-    for solution in solutions:
-        logging.info(solution)
         
     end = time.time()
     logging.info(f"Total solutions founded: {len(solutions)}\nTotal time elapsed for calculating the solutions of the problem: {end - st:.4f} seconds")
