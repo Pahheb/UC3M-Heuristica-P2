@@ -14,8 +14,6 @@ class Plane:
         self.restriction = restriction
         self.t1_duties = t1_duties
         self.t2_duties = t2_duties
-        self.x = None  # Default position
-        self.y = None
 
     def __repr__(self):
         """

@@ -41,38 +41,31 @@ def main():
         logging.info(f"Restricción AllDifferent añadida para las variables de la franja horaria {slot + 1}: {slot_variables}")
         
     # Restricción 2.1: Hasta 2 aviones por taller
+    def max_two_planes(*assigned_positions, position):
+        return sum(pos == position for pos in assigned_positions) <= 2
+
+    # Restricción 2.2: Máximo 1 avión JUMBO por taller
+    def max_one_jumbo(*assigned_positions, position):
+        return sum(pos == position for pos in assigned_positions) <= 1
+
     for slot in range(slots):
-        for position in std_positions + spc_positions:  # Todas las posiciones de talleres
-            # Variables que ocupan esta posición en esta franja
+        # Filtrar las variables según el tipo de posición
+        for position in std_positions + spc_positions:  # Talleres
             slot_variables = [
                 f"av_{plane.id}_{plane.model}_{slot + 1}"
                 for plane in planes
             ]
-            
-            # Añadir una restricción que limite el número de aviones en esta posición
-            def max_two_planes(*assigned_positions):
-                return sum(pos == position for pos in assigned_positions) <= 2
-            
-            problem.addConstraint(max_two_planes, slot_variables)
-            logging.info(f"Restricción: Hasta 2 aviones en posición {position} para la franja {slot + 1}")
+            problem.addConstraint(lambda *args, pos=position: max_two_planes(*args, position=pos), slot_variables)
 
-    # Restricción 2.2: Máximo 1 avión JUMBO por taller
-    for slot in range(slots):
-        for position in spc_positions:  # for all mechanics
-            # variables that are in that position
-            slot_variables = [
+        for position in spc_positions:  # Talleres especialistas (SPC) para JUMBOS
+            jumbo_variables = [
                 f"av_{plane.id}_{plane.model}_{slot + 1}"
                 for plane in planes if plane.model == "JMB"
             ]
-            
-            # Añadir una restricción que limite el número de aviones JUMBO a 1
-            def max_one_jumbo(*assigned_positions):
-                return sum(pos == position for pos in assigned_positions) <= 1
-            
-            problem.addConstraint(max_one_jumbo, slot_variables)
-            logging.info(f"Restricción: Máximo 1 avión JUMBO en posición {position} para la franja {slot + 1}")
+            problem.addConstraint(lambda *args, pos=position: max_one_jumbo(*args, position=pos), jumbo_variables)
 
-        
+                
+    logging.info(f"Problem variables: {problem._variables}\n")
     logging.info("--- Problem Solver Started ---")
     solutions = problem.getSolutions()
     for solution in solutions:
