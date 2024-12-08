@@ -89,29 +89,37 @@ def main():
                 logging.info(f"Restricción de no adyacencia para aviones aplicada entre {var1} y {var2}")
         
     # Restricción 6: Ningún par de aviones JUMBO puede estar en posiciones adyacentes de talleres en la misma franja horaria
-    #TODO: las posiciones tienen que ser adyacentes en spc_positions
+    # generate a list with all position (tuples) of spc_mechanics, is more practical
+    spc_no_object_positions = []
+    for mech in spc_positions:
+        spc_no_object_positions.append((mech.x, mech.y))
+
     for slot in range(slots):
         # for each slot, generate al JMB plane variables
         jumbo_variables = [
             f"av_{plane.id}_{plane.model}_{slot + 1}"
             for plane in planes if plane.model == "JMB"
         ]
-        
+
         for i in range(len(jumbo_variables)):
             for j in range(i + 1, len(jumbo_variables)):
                 var1 = jumbo_variables[i]
                 var2 = jumbo_variables[j]
-                
-                def no_adjacent_jumbos(*args):
-                    # Obtenemos las posiciones de los dos aviones
-                    pos1 = args[0]
-                    pos2 = args[1]
-                    if pos1 is None or pos2 is None:
-                        return True  # Caso donde no se asignan posiciones
-                    # Verificar si están adyacentes
-                    return not (abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1]) == 1)
+            
+                def no_adjacent_jumbos_spc(*assigned_positions):
+                        pos1 = assigned_positions[0]
+                        pos2 = assigned_positions[1]
+                        
+                        if pos1 is None or pos2 is None:
+                            return True  # no applies
+                        # if positions in spc_positions
+                        if pos1 in spc_no_object_positions and pos2 in spc_no_object_positions:
+                            # check if adyacent
+                            if abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1]) == 1:
+                                return False  # Si están adyacentes, no se aplica la asignación
+                        return True  # Si no están adyacentes, la asignación es válida
 
-                problem.addConstraint(no_adjacent_jumbos, (var1, var2))
+                problem.addConstraint(no_adjacent_jumbos_spc, (var1, var2))
                 logging.info(f"Restricción de no adyacencia para aviones JMB en talleres adyacentes aplicada entre {var1} y {var2}")
 
 
