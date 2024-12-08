@@ -63,9 +63,33 @@ def main():
                 for plane in planes if plane.model == "JMB"
             ]
             problem.addConstraint(lambda *args, pos=position: max_one_jumbo(*args, position=pos), jumbo_variables)
-    
+
+    # Restricción 5: Ningún par de aviones puede estar en posiciones adyacentes en la misma franja horaria
+    for slot in range(slots):
+        # for each slot, generate al JMB plane variables
+        plane_variables = [
+            f"av_{plane.id}_{plane.model}_{slot + 1}"
+            for plane in planes]
         
-    # Restricción 6: Ningún par de aviones JUMBO puede estar en posiciones adyacentes en la misma franja horaria
+        for i in range(len(plane_variables)):
+            for j in range(i + 1, len(plane_variables)):
+                var1 = plane_variables[i]
+                var2 = plane_variables[j]
+                
+                def no_adjacent_jumbos(*args):
+                    # Obtenemos las posiciones de los dos aviones
+                    pos1 = args[0]
+                    pos2 = args[1]
+                    if pos1 is None or pos2 is None:
+                        return True  # Caso donde no se asignan posiciones
+                    # Verificar si están adyacentes
+                    return not (abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1]) == 1)
+
+                problem.addConstraint(no_adjacent_jumbos, (var1, var2))
+                logging.info(f"Restricción de no adyacencia para aviones aplicada entre {var1} y {var2}")
+        
+    # Restricción 6: Ningún par de aviones JUMBO puede estar en posiciones adyacentes de talleres en la misma franja horaria
+    #TODO: las posiciones tienen que ser adyacentes en spc_positions
     for slot in range(slots):
         # for each slot, generate al JMB plane variables
         jumbo_variables = [
@@ -88,8 +112,7 @@ def main():
                     return not (abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1]) == 1)
 
                 problem.addConstraint(no_adjacent_jumbos, (var1, var2))
-                print("executed")
-                logging.info(f"Restricción de no adyacencia aplicada entre {var1} y {var2}")
+                logging.info(f"Restricción de no adyacencia para aviones JMB en talleres adyacentes aplicada entre {var1} y {var2}")
 
 
     # Restricción 3: Si un avión tiene programada una tarea de mantenimiento especialista y otra estándar, 
@@ -114,9 +137,8 @@ def main():
                 
             problem.addConstraint(at_least_one_specialist, planesToWork)
             logging.info(f"Restricción aplicada: avión {plane.id} tiene al menos un taller especialista asignado.")
+    
 
-
-                            
     logging.info(f"Problem variables: {problem._variables}\n")
     logging.info("--- Problem Solver Started ---")
     solutions = problem.getSolutions()
