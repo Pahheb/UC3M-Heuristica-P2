@@ -137,15 +137,31 @@ def main():
             def at_least_one_specialist(*assigned_positions):
                 # after some debugging, assigned_position is a tuple such that (i, j),
                 # notice the , after the end of the tuple
-
                 for spc_mechanic in spc_positions:                   
                     if (spc_mechanic.x, spc_mechanic.y) == assigned_positions[0]: # [0] because of the ,
                         return True
                 return False
-                
             problem.addConstraint(at_least_one_specialist, planesToWork)
             logging.info(f"Restricción aplicada: avión {plane.id} tiene al menos un taller especialista asignado.")
     
+
+    # Restricción 4: Todas las tareas de tipo 2 (especialistas) deben realizarse antes que las tareas de tipo 1 (estándar)
+    for slot in range(slots):
+        for plane in planes:
+            if plane.restriction:
+                plane_variable = f"av_{plane.id}_{plane.model}_{slot + 1}"
+                def enforce_task_order(*args):
+                    # *args are the possible values ((i, j),) that a variable can have
+                    print(plane)
+                    pass
+            
+            
+            problem.addConstraint(
+                    enforce_task_order,
+                    plane_variables
+                )
+                
+
 
     logging.info(f"Problem variables: {problem._variables}\n")
     logging.info("--- Problem Solver Started ---")
