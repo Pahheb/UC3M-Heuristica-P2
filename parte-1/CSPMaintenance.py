@@ -147,19 +147,19 @@ def main():
 
     # Restricción 4: Todas las tareas de tipo 2 (especialistas) deben realizarse antes que las tareas de tipo 1 (estándar)
     for slot in range(slots):
+        planesWithRestriction = []
         for plane in planes:
             if plane.restriction:
                 plane_variable = f"av_{plane.id}_{plane.model}_{slot + 1}"
-                def enforce_task_order(*args):
-                    # *args are the possible values ((i, j),) that a variable can have
-                    print(plane)
+                planesWithRestriction.append(plane_variable)
+                
+                def enforce_task_order(args):
+                    # args are the possible values ((i, j),) that a variable can have
+                    print(planes)
                     pass
             
             
-            problem.addConstraint(
-                    enforce_task_order,
-                    plane_variables
-                )
+            problem.addConstraint(enforce_task_order, planesWithRestriction)
                 
 
 
