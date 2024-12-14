@@ -34,13 +34,11 @@ def main():
         for slot in range(slots):
             variable_name = f"av_{plane.id}_{plane.model}_{slot + 1}"
             problem.addVariable(variable_name, planeDomain)
-            logging.info(f"Variable {variable_name}")
     
     # Restricción 1: En cada franja horaria (slot), ningún avión puede compartir la misma posición
     for slot in range(slots):
         slot_variables = [f"av_{plane.id}_{plane.model}_{slot + 1}" for plane in planes]
         problem.addConstraint(AllDifferentConstraint(), slot_variables)
-        logging.info(f"Restricción AllDifferent añadida para las variables de la franja horaria {slot + 1}: {slot_variables}")
         
     # Restricción 2.1: Hasta 2 aviones por taller
     def max_two_planes(*assigned_positions, position):
@@ -91,33 +89,33 @@ def main():
                         return True
                 return False
             problem.addConstraint(at_least_one_specialist, planesToWork)
-            logging.info(f"Restricción aplicada: avión {plane.id} tiene al menos un taller especialista asignado.")
     
     # Restricción 4
     for plane in planes:
         if plane.restriction:
-            # Generar las variables correspondientes a las franjas para las tareas tipo 2
-            variables = [
-                f"av_{plane.id}_{plane.model}_{slot + 1}"
-                for slot in range(plane.t2_duties + 1)
-            ]
-            
-            def enforce_task_order(*args):
-                """
-                Función de restricción: asegura que las tareas tipo 2 se asignen a posiciones válidas de talleres especialistas.
-                - args: las posibles asignaciones de valores ((i, j),) para las variables.
-                """
-                # Extraer las posiciones válidas (i, j)
-                positions = [val for val in args if val is not None]
+            for slot in range(slots):
+                # Generar las variables correspondientes a las franjas para las tareas tipo 2
+                variable = [f"av_{plane.id}_{plane.model}_{slot + 1}"]
                 
-                # Asegurarse de que todas las tareas tipo 2 están en posiciones especialistas
-                if not any(pos in spc_positions for pos in positions):
-                    return False  # No hay ninguna posición en talleres especialistas
-                
-                return True 
+                mech_pos = []
+                for pos in spc_positions:
+                    mech_pos.append((pos.x, pos.y))
             
-            # Añadir la restricción para las variables del avión con tareas tipo 2
-            problem.addConstraint(enforce_task_order, variables)
+                def enforce_task_order(*args):
+                    """
+                    Función de restricción: asegura que las tareas tipo 2 se asignen a posiciones válidas de talleres especialistas.
+                    - args: las posibles asignaciones de valores ((i, j),) para las variables.
+                    """
+                    # Extraer las posiciones válidas (i, j)
+                    positions = [val for val in args if val is not None]
+                                        
+                    # Asegurarse de que todas las tareas tipo 2 están en posiciones especialistas
+                    if not any(pos in mech_pos for pos in positions):
+                        return False  # No hay ninguna posición en talleres especialistas
+                    return True 
+                
+                # Añadir la restricción para las variables del avión con tareas tipo 2
+                problem.addConstraint(enforce_task_order, variable)
     
     # Restricción 5: Ningún par de aviones puede estar en posiciones adyacentes en la misma franja horaria
     for slot in range(slots):
@@ -141,7 +139,6 @@ def main():
                     return not (abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1]) == 1)
 
                 problem.addConstraint(no_adjacent_jumbos, (var1, var2))
-                logging.info(f"Restricción de no adyacencia para aviones aplicada entre {var1} y {var2}")
         
     # Restricción 6: Ningún par de aviones JUMBO puede estar en posiciones adyacentes de talleres en la misma franja horaria
     # generate a list with all position (tuples) of spc_mechanics, is more practical
@@ -182,7 +179,6 @@ def main():
     solutions = problem.getSolutions()
         
     end = time.time()
-    logging.info(f"Total solutions founded: {len(solutions)}\nTotal time elapsed for calculating the solutions of the problem: {end - st:.4f} seconds")
     
     file_name_without_extension = os.path.splitext(os.path.basename(routeToInitFile))[0]    
     with open(f"{file_name_without_extension}.csv", "w", newline='') as file:
@@ -192,6 +188,7 @@ def main():
         
         if len(solutions) == 0:
             writer.writerow(["No possible solutions were founded"])
+            return
         
         # now we will create the .csv with the first ten possible solutions (out of the n possible ones)
         for i in range(0, 11, 1):
