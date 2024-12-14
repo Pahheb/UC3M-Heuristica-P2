@@ -64,6 +64,59 @@ def main():
             ]
             problem.addConstraint(lambda *args, pos=position: max_one_jumbo(*args, position=pos), jumbo_variables)
 
+    
+    
+        # Restricción 4: Todas las tareas de tipo 2 (especialistas) deben realizarse antes que las tareas de tipo 1 (estándar)
+    
+    
+        # Restricción 3: Si un avión tiene programada una tarea de mantenimiento especialista y otra estándar, 
+    
+    # restricción 3
+    for slot in range(slots):
+        for plane in planes:
+            
+            plane_variable = f"av_{plane.id}_{plane.model}_{slot + 1}"
+            planesToWork = []
+            # if t1 && t2 >= 1, then we must apply this restriction
+            if plane.t2_duties >= 1 and plane.t1_duties >= 1:
+                planesToWork.append(plane_variable)
+            
+            def at_least_one_specialist(*assigned_positions):
+                # after some debugging, assigned_position is a tuple such that (i, j),
+                # notice the , after the end of the tuple
+                for spc_mechanic in spc_positions:                   
+                    if (spc_mechanic.x, spc_mechanic.y) == assigned_positions[0]: # [0] because of the ,
+                        return True
+                return False
+            problem.addConstraint(at_least_one_specialist, planesToWork)
+            logging.info(f"Restricción aplicada: avión {plane.id} tiene al menos un taller especialista asignado.")
+    
+    # Restricción 4
+    for plane in planes:
+        if plane.restriction:
+            # Generar las variables correspondientes a las franjas para las tareas tipo 2
+            variables = [
+                f"av_{plane.id}_{plane.model}_{slot + 1}"
+                for slot in range(plane.t2_duties + 1)
+            ]
+            
+            def enforce_task_order(*args):
+                """
+                Función de restricción: asegura que las tareas tipo 2 se asignen a posiciones válidas de talleres especialistas.
+                - args: las posibles asignaciones de valores ((i, j),) para las variables.
+                """
+                # Extraer las posiciones válidas (i, j)
+                positions = [val for val in args if val is not None]
+                
+                # Asegurarse de que todas las tareas tipo 2 están en posiciones especialistas
+                if not any(pos in spc_positions for pos in positions):
+                    return False  # No hay ninguna posición en talleres especialistas
+                
+                return True 
+            
+            # Añadir la restricción para las variables del avión con tareas tipo 2
+            problem.addConstraint(enforce_task_order, variables)
+    
     # Restricción 5: Ningún par de aviones puede estar en posiciones adyacentes en la misma franja horaria
     for slot in range(slots):
         # for each slot, generate al JMB plane variables
@@ -120,48 +173,7 @@ def main():
                         return True  # Si no están adyacentes, la asignación es válida
 
                 problem.addConstraint(no_adjacent_jumbos_spc, (var1, var2))
-                logging.info(f"Restricción de no adyacencia para aviones JMB en talleres adyacentes aplicada entre {var1} y {var2}")
-
-
-    # Restricción 3: Si un avión tiene programada una tarea de mantenimiento especialista y otra estándar, 
-    # debe tener asignado al menos un taller especialista en alguna de las franjas horarias
-    for slot in range(slots):
-        for plane in planes:
-            
-            plane_variable = f"av_{plane.id}_{plane.model}_{slot + 1}"
-            planesToWork = []
-            # if t1 && t2 >= 1, then we must apply this restriction
-            if plane.t2_duties >= 1 and plane.t1_duties >= 1:
-                planesToWork.append(plane_variable)
-            
-            def at_least_one_specialist(*assigned_positions):
-                # after some debugging, assigned_position is a tuple such that (i, j),
-                # notice the , after the end of the tuple
-                for spc_mechanic in spc_positions:                   
-                    if (spc_mechanic.x, spc_mechanic.y) == assigned_positions[0]: # [0] because of the ,
-                        return True
-                return False
-            problem.addConstraint(at_least_one_specialist, planesToWork)
-            logging.info(f"Restricción aplicada: avión {plane.id} tiene al menos un taller especialista asignado.")
-    
-
-    # Restricción 4: Todas las tareas de tipo 2 (especialistas) deben realizarse antes que las tareas de tipo 1 (estándar)
-    for slot in range(slots):
-        planesWithRestriction = []
-        for plane in planes:
-            if plane.restriction:
-                plane_variable = f"av_{plane.id}_{plane.model}_{slot + 1}"
-                planesWithRestriction.append(plane_variable)
-                
-                def enforce_task_order(args):
-                    # args are the possible values ((i, j),) that a variable can have
-                    print(planes)
-                    pass
-            
-            
-            problem.addConstraint(enforce_task_order, planesWithRestriction)
-                
-
+                logging.info(f"Restricción de no adyacencia para aviones JMB en talleres adyacentes aplicada entre {var1} y {var2}")    
 
     logging.info(f"Problem variables: {problem._variables}\n")
     logging.info("--- Problem Solver Started ---")
