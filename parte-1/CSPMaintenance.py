@@ -4,6 +4,8 @@ from utils.Map import Map
 import sys
 import logging
 import time
+import csv
+import os
 logger = logging.getLogger(__name__)
 
 from constraint import *
@@ -181,6 +183,21 @@ def main():
         
     end = time.time()
     logging.info(f"Total solutions founded: {len(solutions)}\nTotal time elapsed for calculating the solutions of the problem: {end - st:.4f} seconds")
+    
+    file_name_without_extension = os.path.splitext(os.path.basename(routeToInitFile))[0]    
+    with open(f"{file_name_without_extension}.csv", "w", newline='') as file:
+        writer = csv.writer(file)
+        field = [f"N. Sol: {len(solutions)}"]
+        writer.writerow(field)
+        
+        if len(solutions) == 0:
+            writer.writerow(["No possible solutions were founded"])
+        
+        # now we will create the .csv with the first ten possible solutions (out of the n possible ones)
+        for i in range(0, 11, 1):
+            writer.writerow([f"Solución {i}:"])
+            writer.writerow([solutions[i]])
 
+        
 if __name__ == '__main__':
     main()
