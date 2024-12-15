@@ -97,9 +97,9 @@ def main():
     # Restricción 4: Todas las tareas de tipo 2 (especialistas) deben realizarse antes que las tareas de tipo 1 (estándar)
     for plane in planes:
         if plane.restriction:
-            for slot in range(slots):
+            for iteration in range(plane.t2_duties + 1): # generamos las primeras franjas teniendo en cuenta t2_duties (si solo hay dos tareas, generaremos dos franjas)
                 # Generar las variables correspondientes a las franjas para las tareas tipo 2
-                variable = [f"av_{plane.id}_{plane.model}_{slot + 1}"]
+                variable = [f"av_{plane.id}_{plane.model}_{iteration + 1}"]
             
                 def enforce_task_order(*args):
                     """
@@ -108,11 +108,12 @@ def main():
                     """
                     # Extraer las posiciones válidas (i, j)
                     positions = [val for val in args if val is not None]
-                                        
-                    # Asegurarse de que todas las tareas tipo 2 están en posiciones especialistas
-                    if not any(pos in spc_formatted_positions for pos in positions):
-                        return False  # No hay ninguna posición en talleres especialistas
-                    return True 
+                    for pos in positions:
+                        if pos in spc_formatted_positions:
+                            # si la posición existe en los talleres especialistas, hemos acabado
+                            return True
+                    return False
+
                 
                 # Añadir la restricción para las variables del avión con tareas tipo 2
                 problem.addConstraint(enforce_task_order, variable)
