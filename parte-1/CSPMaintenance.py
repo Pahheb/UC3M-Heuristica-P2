@@ -1,5 +1,4 @@
 from utils.file_processor import process_initial_file
-from utils.Map import Map
 
 import sys
 import logging
@@ -22,9 +21,17 @@ def main():
     slots = data["franjas"]
     matriz_size = data["matriz_size"]
     std_positions = data["std_positions"]
+    std_formatted_positions = []
+    spc_formatted_positions = []
     spc_positions = data["spc_positions"]  
-    prk_positions = data["prk_positions"]
+    prk_positions = data["prk_positions"] 
     planes = data["planes"]
+    
+    for i in std_positions:
+        std_formatted_positions.append((i.x, i.y))
+        
+    for i in spc_positions:
+        spc_formatted_positions.append((i.x, i.y))
     
     planeDomain =[(i, j) for i in range(matriz_size[0]) for j in range(matriz_size[1])]
     
@@ -50,7 +57,7 @@ def main():
 
     for slot in range(slots):
         # Filtrar las variables según el tipo de posición
-        for position in std_positions + spc_positions:  # Talleres
+        for position in spc_formatted_positions + std_formatted_positions:  # Talleres
             slot_variables = [
                 f"av_{plane.id}_{plane.model}_{slot + 1}"
                 for plane in planes
@@ -65,13 +72,7 @@ def main():
             problem.addConstraint(lambda *args, pos=position: max_one_jumbo(*args, position=pos), jumbo_variables)
 
     
-    
-        # Restricción 4: Todas las tareas de tipo 2 (especialistas) deben realizarse antes que las tareas de tipo 1 (estándar)
-    
-    
-        # Restricción 3: Si un avión tiene programada una tarea de mantenimiento especialista y otra estándar, 
-    
-    # restricción 3
+    # Restricción 3: Si un avión tiene programada una tarea de mantenimiento especialista y otra estándar, 
     for slot in range(slots):
         for plane in planes:
             
@@ -82,24 +83,23 @@ def main():
                 planesToWork.append(plane_variable)
             
             def at_least_one_specialist(*assigned_positions):
-                # after some debugging, assigned_position is a tuple such that (i, j),
-                # notice the , after the end of the tuple
-                for spc_mechanic in spc_positions:                   
-                    if (spc_mechanic.x, spc_mechanic.y) == assigned_positions[0]: # [0] because of the ,
+                for slot in range(len(assigned_positions)):
+                    if assigned_positions[slot] in spc_formatted_positions:
+                        # Retornamos True porque ya cumple la condición
                         return True
+                # Si ninguna posición asignada es de especialista, retornamos False
                 return False
+
+            
             problem.addConstraint(at_least_one_specialist, planesToWork)
     
-    # Restricción 4
+    
+    # Restricción 4: Todas las tareas de tipo 2 (especialistas) deben realizarse antes que las tareas de tipo 1 (estándar)
     for plane in planes:
         if plane.restriction:
             for slot in range(slots):
                 # Generar las variables correspondientes a las franjas para las tareas tipo 2
                 variable = [f"av_{plane.id}_{plane.model}_{slot + 1}"]
-                
-                mech_pos = []
-                for pos in spc_positions:
-                    mech_pos.append((pos.x, pos.y))
             
                 def enforce_task_order(*args):
                     """
@@ -110,7 +110,7 @@ def main():
                     positions = [val for val in args if val is not None]
                                         
                     # Asegurarse de que todas las tareas tipo 2 están en posiciones especialistas
-                    if not any(pos in mech_pos for pos in positions):
+                    if not any(pos in spc_formatted_positions for pos in positions):
                         return False  # No hay ninguna posición en talleres especialistas
                     return True 
                 
@@ -142,9 +142,6 @@ def main():
         
     # Restricción 6: Ningún par de aviones JUMBO puede estar en posiciones adyacentes de talleres en la misma franja horaria
     # generate a list with all position (tuples) of spc_mechanics, is more practical
-    spc_no_object_positions = []
-    for mech in spc_positions:
-        spc_no_object_positions.append((mech.x, mech.y))
 
     for slot in range(slots):
         # for each slot, generate al JMB plane variables
@@ -165,7 +162,7 @@ def main():
                         if pos1 is None or pos2 is None:
                             return True  # no applies
                         # if positions in spc_positions
-                        if pos1 in spc_no_object_positions and pos2 in spc_no_object_positions:
+                        if pos1 in spc_formatted_positions and pos2 in spc_formatted_positions:
                             # check if adyacent
                             if abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1]) == 1:
                                 return False  # Si están adyacentes, no se aplica la asignación
