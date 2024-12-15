@@ -42,14 +42,14 @@ def main():
     problem = Problem()
     logging.info("--- Creation of variable and domain asignation ---")
     for plane in planes:
-        if plane.t1_duties + plane.t2_duties == 0:
+        if plane.t1_duties + plane.t2_duties == 0: # si no hay tareas, el avión siempre tiene que estar en un parking
             for slot in range(slots):
                 variable_name = f"av_{plane.id}_{plane.model}_{slot + 1}"
                 problem.addVariable(variable_name, prk_formatted_positions)    
-                    
-        for slot in range(slots):
-            variable_name = f"av_{plane.id}_{plane.model}_{slot + 1}"
-            problem.addVariable(variable_name, planeDomain)
+        else:          
+            for slot in range(slots):
+                variable_name = f"av_{plane.id}_{plane.model}_{slot + 1}"
+                problem.addVariable(variable_name, planeDomain)
     
     # Restricción 1: En cada franja horaria (slot), ningún avión puede compartir la misma posición
     for slot in range(slots):
