@@ -24,7 +24,8 @@ def main():
     std_formatted_positions = []
     spc_formatted_positions = []
     spc_positions = data["spc_positions"]  
-    prk_positions = data["prk_positions"] 
+    prk_positions = data["prk_positions"]
+    prk_formatted_positions = []
     planes = data["planes"]
     
     for i in std_positions:
@@ -32,12 +33,20 @@ def main():
         
     for i in spc_positions:
         spc_formatted_positions.append((i.x, i.y))
+        
+    for i in prk_positions:
+        prk_formatted_positions.append((i.x, i.y))
     
     planeDomain =[(i, j) for i in range(matriz_size[0]) for j in range(matriz_size[1])]
     
     problem = Problem()
     logging.info("--- Creation of variable and domain asignation ---")
     for plane in planes:
+        if plane.t1_duties + plane.t2_duties == 0:
+            for slot in range(slots):
+                variable_name = f"av_{plane.id}_{plane.model}_{slot + 1}"
+                problem.addVariable(variable_name, prk_formatted_positions)    
+                    
         for slot in range(slots):
             variable_name = f"av_{plane.id}_{plane.model}_{slot + 1}"
             problem.addVariable(variable_name, planeDomain)
