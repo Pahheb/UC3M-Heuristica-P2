@@ -13,7 +13,7 @@ OUTDIR = "src/parte-2/ASTAR-tests/outputs/"
 def process_file(filename: str) -> tuple[int, dict, dict]:
     """
     This function processes a file with the format
-    specified and returns a tuple with the data.
+specified and returns a tuple with the data.
     :return (int): Number of planes
     :return (list): Each plane initial and final position.
         + First plane has the data in position 0 and so on
@@ -161,7 +161,7 @@ class State:
             cost:float,
             heuristicType:int,
             map: dict,
-            planePositions:dict,
+            planeValues:dict,
             ):
 
         self.value = value
@@ -169,57 +169,129 @@ class State:
         self.cost = cost
         self.heuristicType = heuristicType
         self.map = map
-        self.planePositions = planePositions
+        self.planeValues= planeValues
 
     @property
-    def heuristicCost(self):
-        return self.__heuristicCost
-
-    @heuristicCost.setter
-    def heuristicCost(self, heuristicCost:float):
-        if type(heuristicCost) != float:
-            raise TypeError("ERROR --- StateClass --- Heuristic cost must be a float")
+    def heuristicCost(self) -> float:
+        if self.heuristicType == 1:
+            return self.heuristic_manhattan()
+        elif self.heuristicType == 2:
+            return self.heuristic_euler()
         else:
-            self.__heuristicCost = self.heuristic(self.heuristicType)
+            print("ERROR: Invalid heuristic type")
+            return 0
+    @property
+    def totalCost(self) -> float:
+        return self.cost + self.heuristicCost
 
+    @property
+    def planeGoals(self) -> list[tuple[int,int]]:
+        planeGoals = []
+        for key in self.planePositions:
+            planeGoals.append(self.planeValues[key][1])
+        return planeGoals
+
+    @property
+    def planePositions(self) -> list[tuple[int,int]]:
+        planeGoals = []
+        for key in self.planePositions:
+            planeGoals.append(self.planeValues[key][0])
+        return planeGoals
+
+    @property
+    def possibleMoves(self) -> list[tuple[int,int]]:
+        moves= [(0, 0),    # wait
+                (0, 1),    # up
+                (0, -1),   # down
+                (-1, 0),   # left
+                (1, 0)]    # right
+        return moves
+
+    @property
+    def finalState(self) -> bool: 
+        if self.planePositions == self.planeGoals:
+            return True
+        return False
+
+    # Generate all possible movement combinations
+    def cartesian_product(self,lists):
+        if not lists:
+            return [[]]
+        result = []
+        for item in lists[0]:
+            for rest in self.cartesian_product(lists[1:]):
+                result.append([item] + rest)
+        return result
+
+    # Apply restrictions
+
+    
 
     def expand_state(self)-> list[State]:
-        print(self.heuristicCost)
-        child_states = []
-
-        def operator_move() -> list[State]:
-            pass
-        def operator_wait() -> list[State]:
-            pass
+        childStates = []
+        # 1. Get all possible valid and non-valid combinations
+        possibleMoves= self.cartesian_product(self.possibleMoves*len(self.planeValues))
+       
+        # Create ChildStates:
 
         return child_states.sort()
 
 
-    def heuristic(self,heuristicType:int)-> float:
-
-        if heuristicType == 1:
-            return self.heuristic_manhattan()
-
-        elif heuristicType==2:
-            return self.heuristic_euler()
-
     def heuristic_manhattan(self)-> float:
-        pass 
+        """
+        Compute the manhattan distance between the
+        current position and goal position of each plane,
+        then sum all the distances.
+        """
+
+        heuristicValue = 0
+        for key in self.planeValues:
+            initial = self.planeValues[key][0]
+            final = self.planeValues[key][1]
+            heuristicValue += abs(final[0] - initial[0]) + abs(final[1] - initial[1])
+        return heuristicValue 
 
     def heuristic_euler(self)-> float:
         pass
 
 
-def astar(cerrada:list,abierta:list,exito:bool =False):
+def astar(open:list[State],closed:list[State]= [],goal:bool =False) -> tuple[list,list]:
+    while len(open) or goal:
+        if len(open) == 1:
+            currentState:State = open.pop(0)
+        else:
+            for elem in open: 
+                if not(closed.count(elem) >= 1):
+                    currentState:State = elem 
+                    break
+                
+        if currentState.finalState:
+            goal = True
+            break 
+        else:
+            closed.append(currentState)
+            successors = currentState.expand_state
+            open = sorted(open + successors)
 
 
-    pass
+    if goal:
+        return get_solution(currentState)
+    else:
+        print(f"WARNING - NO SOLUTIONS FOUND")
+        return [],[]
+
+def get_solution(final_state:State) -> tuple[list[tuple[int,int]],list[str]]
+    return  [],[]
 
 
 def main():
     filename = sys.argv[1]
-    planeNumber, planePositions,map = process_file(filename)
-    heuristicType = sys.argv[2]
+    planeNumber, planeValues ,map = process_file(filename)
+    heuristicType = int(sys.argv[2])
+    initialState = State(planeValues[0], None, 0,heuristicType,map,planeValues)
+    astar([initialState])
+
+
 
 
 if __name__ == "__main__":
