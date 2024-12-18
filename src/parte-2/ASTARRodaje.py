@@ -2,6 +2,7 @@ import os
 import re
 import sys
 import time
+import math
 
 
 #TODO: Think about base cases and hot to save time by using them
@@ -199,7 +200,7 @@ class State:
         if self.heuristicType == 1:
             return self.heuristic_manhattan()
         elif self.heuristicType == 2:
-            return self.heuristic_euler()
+            return self.heuristic_euclidean()
         else:
             print_d("ERROR: Invalid heuristic type")
             return 0
@@ -243,8 +244,17 @@ class State:
             heuristicValues.append(abs(final[0] - initial[0]) + abs(final[1] - initial[1]))
         return max(heuristicValues)
 
-    def heuristic_euler(self)-> float:
-        return 0
+    def heuristic_euclidean(self)-> float:
+        """
+        Compute the euclidean distance between the
+        current position and the goal position of each plane.
+        """
+        heuristicsValues = []
+        for i in range(len(self.planePositions)):
+            initial = self.planePositions[i]
+            final = self.planeGoals[i]
+            heuristicsValues.append(math.sqrt((final[0] - initial[0])**2 + (final[1] - initial[1])**2))
+        return max(heuristicsValues)
 
     def condition_free(self,values:list[tuple[int,int]])-> bool:
         """
