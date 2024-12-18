@@ -94,7 +94,7 @@ specified and returns a tuple with the data.
 def create_output_files(
     filename: str,
     totalTime: float,
-    makespan: int,
+    makespan: float,
     heuristicType: int,
     initialHeuristic: float,
     expandedNodes: int,
@@ -233,7 +233,10 @@ class State:
 
     @property
     def waitCost(self) -> float:
-        return 2.0
+        return 0.5
+    @property
+    def moveCost(self) ->float:
+        return 1
 
     def heuristic_manhattan(self)-> float:
         """
@@ -285,6 +288,7 @@ class State:
         for i in range(len(values)):
             for j in range(i+1,len(values)):
                 if values[i] == values[j]:
+
                     return False
         return True
 
@@ -296,7 +300,7 @@ class State:
         """
         for i in range(len(self.planePositions)):
             for j in range(len(values)):
-                if self.planePositions[i] == values[j] and values[j] == self.planePositions[j]:
+                if self.planePositions[i] == values[j] and values[i] == self.planePositions[j]:
                     return False
                     
         return True
@@ -307,7 +311,7 @@ class State:
         :param Values: List of tuples with the positions to check
         """
         for i in range(len(values)):
-            if values[i] == self.planePositions[i] and self.map[values[i]] == "A":
+            if (values[i] == self.planePositions[i]) and (self.map[values[i]] == "A"):
                 return False
         return True
 
@@ -317,13 +321,12 @@ class State:
         Given a list of moves of a plane, get the cost of the state change.
         :param Values: List of tuples with the moves of the planes
         """
-        totalCost = 1
-
+        totalCost = 0 
         for elem in values:
             if elem == (0,0):
                 totalCost += self.waitCost
             else:
-                totalCost += 1
+                totalCost += self.moveCost
 
         return totalCost/len(values)
 
@@ -384,11 +387,20 @@ class State:
                 positions.append(newPosition)
 
             # Check conditions:
+            print_d(f"MOVES_PRE: {moves}")
             if self.condition_in_map(positions):
-                if self.condition_free(positions) and self.condition_same_position(positions) and self.condition_cross(positions) and self.condition_wait(positions):
-                    result[0].append(positions)
-                    result[1].append(moves)
-
+                print_d(f"MOVES_MAP: {moves}")
+                if self.condition_free(positions):
+                    print_d(f"MOVES_FREE: {moves}")
+                    if self.condition_same_position(positions):
+                        print_d(f"MOVES_SAME: {moves}")
+                        if self.condition_wait(positions):
+                            print_d(f"MOVES_WAIT: {moves}")
+                            if self.condition_cross(positions):
+                                result[0].append(positions)
+                                #print_d(f"MOVES:{moves}")
+                                result[1].append(moves)
+                                print_d(f"MOVES_POST: {moves}")
         return result
    
 
@@ -473,14 +485,26 @@ def astar(open:list[State],closed:list[State]= [],goal:bool =False) -> tuple[flo
 #TODO: El código repite la creación de una lista de movimientos para luego reinterpretarla en 
 # el método de create_output_files. Se podría eliminar uno de esos dos.
 
-def get_parse_solution(final_state:State) -> tuple[int,list[list[tuple[int,int]]],list[list[str]]]:
+def get_parse_solution(finalState:State) -> tuple[float,list[list[tuple[int,int]]],list[list[str]]]:
     """
     This function returns the solution of the problem as:
     :return (int): Makespan of the solution
     :return (list): List of points for each plane
     :return (list): List of moves for each plane
     """
-    return  0,[],[]
+    state = finalState
+    states = [finalState]
+    makespan = 0
+    planesMovePoints:list[list[tuple[int,int]]] = []
+    planesMoveDirections:list[list[str]] = []
+
+    while state.prev:
+        states.append(state.prev)
+        state = state.prev
+    makespan = len(states)
+    for state in states:
+        print_d(state)
+    return makespan,planesMovePoints,planesMoveDirections
 
 
 def main():
@@ -515,9 +539,9 @@ def main():
     --------------------
     Total time: {totalTime}
     Total ASTAR time: {totalASTARTime}
-    Makespan:{makespan}
-    Heuristic Type:{heuristicType}
-    Initial Heuristic:{initialHeuristic}
+    Makespan: {makespan}
+    Heuristic Type: {heuristicType}
+    Initial Heuristic: {initialHeuristic}
     Expanded Nodes: {expandedNodes}
     -------------------\n
     """
