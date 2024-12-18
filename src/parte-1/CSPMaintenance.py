@@ -214,7 +214,7 @@ def main():
     end = time.time()
     
     file_name_without_extension = os.path.splitext(os.path.basename(routeToInitFile))[0]    
-    with open(f"{file_name_without_extension}.csv", "w", newline='') as file:
+    with open(f"CSP-tests/{file_name_without_extension}.csv", "w", newline='') as file:
         writer = csv.writer(file)
         field = [f"N. Sol: {len(solutions)}"]
         writer.writerow(field)
