@@ -106,7 +106,7 @@ def main():
     # Restricción 4: Todas las tareas de tipo 2 (especialistas) deben realizarse antes que las tareas de tipo 1 (estándar)
     for plane in planes:
         if plane.restriction:
-            for iteration in range(plane.t2_duties + 1): # generamos las primeras franjas teniendo en cuenta t2_duties (si solo hay dos tareas, generaremos dos franjas)
+            for iteration in range(plane.t2_duties): # generamos las primeras franjas teniendo en cuenta t2_duties (si solo hay dos tareas, generaremos dos franjas)
                 # Generar las variables correspondientes a las franjas para las tareas tipo 2
                 variable = [f"av_{plane.id}_{plane.model}_{iteration + 1}"]
             
@@ -226,6 +226,6 @@ def main():
             writer.writerow([f"Solución {i}:"])
             writer.writerow([solutions[i]])
 
-        
+    logging.info(f"Tiempo de ejecución total del programa {end - st}ms")
 if __name__ == '__main__':
     main()
