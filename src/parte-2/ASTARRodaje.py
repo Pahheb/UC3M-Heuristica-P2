@@ -3,7 +3,6 @@ import re
 import sys
 import time
 
-from dump import expand
 
 #TODO: Think about base cases and hot to save time by using them
 
@@ -186,16 +185,10 @@ class State:
     @property
     def planeGoals(self) -> list[tuple[int,int]]:
         planeGoals = []
-        for key in self.planePositions:
+        for key in self.planeValues:
             planeGoals.append(self.planeValues[key][1])
         return planeGoals
 
-    @property
-    def planePositions(self) -> list[tuple[int,int]]:
-        planeGoals = []
-        for key in self.planePositions:
-            planeGoals.append(self.planeValues[key][0])
-        return planeGoals
 
     @property
     def possibleMoves(self) -> list[tuple[int,int]]:
@@ -208,32 +201,137 @@ class State:
 
     @property
     def finalState(self) -> bool: 
-        if self.planePositions == self.planeGoals:
+        if self.planeValues == self.planeGoals:
             return True
         return False
 
-    # Generate all possible movement combinations
-    def cartesian_product(self,lists):
-        if not lists:
-            return [[]]
-        result = []
-        for item in lists[0]:
-            for rest in self.cartesian_product(lists[1:]):
-                result.append([item] + rest)
+    @property
+    def waitCost(self) -> float:
+        return 2
+
+
+    def condition_free(self,values:list[tuple[int,int]])-> bool:
+        """
+        Check that all the positions in the list are 
+        free positions in the map.
+        All positions are free if they are not "G" in the map.
+
+        :param Values: List of tuples with the positions to check
+        """
+        for elem in values:
+            if self.map[elem] != "G":
+                return False
+        return True
+
+    def condition_same_position(self,values:list[tuple[int,int]])-> bool:
+        """
+        Check that no two values in the list are the same.
+        :param Values: List of tuples with the positions to check
+        """
+        for i in range(len(values)):
+            for j in range(i+1,len(values)):
+                if values[i] == values[j]:
+                    return False
+        return True
+
+    def condition_cross(self,values:list[tuple[int,int]])-> bool:
+        """
+        Check that no two planes cross each other.Compare the given list
+        of values with the current positions of the planes.
+        :param Values: List of tuples with the positions to
+        """
+        for i in range(len(self.planeValues)):
+            for j in range(len(values)):
+                if self.planeValues[i] == values[j] and values[j] == self.planeValues[j]:
+                    return False
+        return True
+
+    def condition_wait(self,values:list[tuple[int,int]])-> bool:
+        """
+        Check that a plane can only wiat if the map position is not "A"
+        :param Values: List of tuples with the positions to check
+        """
+        for i in range(len(values)):
+            if values[i] == self.planeValues[i] and self.map[values[i]] == "A":
+                return False
+        return True
+
+
+    def get_child_cost(self,values:list[tuple[int,int]]) -> float:
+        """
+        Given a list of moves of a plane, get the cost of the state change.
+        :param Values: List of tuples with the moves of the planes
+        """
+        totalCost = 0
+
+        for elem in values:
+            if elem == (0,0):
+                totalCost += self.waitCost
+            else:
+                totalCost += 1
+
+        return totalCost
+
+    def operator_move(self) -> tuple[list[list[tuple[int,int]]],list[list[tuple[int,int]]]]:
+        """
+        Compute the Cartesian product of a set with itself n times,then
+        apply the conditions to get the valid combinations.
+
+        :param input_set: Set of tuples, where each tuple contains two integers
+        :param n: Number of times to compute the product
+        :return (list): List of lists with the valid combinations (childPositionValues)
+        :return (list): List of lists with the moves to get the valid combinations (childMoveValues)
+
+        Preconditions:
+        * Adjacency: The next position will be adjacent to the current one
+        * Free: Checked usig condition_free()
+        * Same Position: Checked using condition_same_position()
+        * Cross: Checked using condition_cross()
+        * Wait: Checked using condition_wait()
+
+        """
+        input_set = self.possibleMoves
+        n = len(self.planeValues)
+
+        if n <= 0:
+            return ([], [])
+        
+        # Convert set to sorted list for consistent ordering
+        # For tuples, we sort based on both elements of the tuple
+        elements = sorted(list(input_set), key=lambda x: (x[0], x[1]))
+        set_size = len(elements)
+        
+        # Total number of combinations remains the same
+        # If we have k tuples and select n times, we get k^n combinations
+        total_combinations = set_size ** n
+        
+        # Initialize result list
+        result = ([], [])
+        
+        # Generate each combination
+        for i in range(total_combinations):
+            # Current combination
+            moves = []
+            # List of tuples with the new positions
+            positions = []
+            temp = i
+            
+            # The base conversion process remains the same
+            # But now each selected element is a tuple instead of a number
+            for _ in range(n):
+                moves.append(elements[temp % set_size])
+                temp //= set_size
+            
+            # Apply moves to current position 
+            for i in range(len(moves)):
+                positions[i] = (moves[i][0] + self.positionValues[i][0],moves[i][1] + self.positionValues[i][1])
+            # Check conditions:
+            if self.condition_free(positions) and self.condition_same_position(positions) and self.condition_cross(positions) and self.condition_wait(positions):
+                result[0].append(positions)
+                result[1].append(moves)
+            
         return result
-
-    def constraint_map(self,Values:list[tuple[int,int]]) -> list[tuple[int,int]]:
-        return []
-
-    def constraint_same_position(self,Values:list[tuple[int,int]])-> list[tuple[int,int]]:
-        return [] 
-
-    def constraint_cross(self,Values:list[tuple[int,int]])-> list[tuple[int,int]]:
-        return [] 
-
-    def get_child_cost(self,Values:list[tuple[int,int]]) -> list[float]:
-        return []
-
+   
 
     def expand_state(self) -> list["State"]:
         """
@@ -246,19 +344,14 @@ class State:
         :return (list[State]): Sorted list of all the possible child states based on their total cost
         """
         childStates = []
-        childValues = []
-        # Get all possible valid and non-valid combinations
-        childvalues = self.cartesian_product(self.possibleMoves*len(self.planeValues))
-        # Apply restrictions for non-valid combinations
-        childValues = self.constraint_map(childValues)
-        childValues = self.constraint_same_position(childValues)
-        childValues = self.constraint_cross(childValues)
-       
+        childCosts = []
+        childPositionValues,childMoveValues = self.operator_move()
         # Create ChildStates:
-        childCosts = self.get_child_cost(childValues)
+        for elem in childMoveValues:
+            childCosts.append(self.get_child_cost(elem))
 
-        for i in range(len(childValues)):
-            childStates.append(State(childValues[i],self,self.cost + childCosts[i],self.heuristicType,self.map,self.planeValues))
+        for i in range(len(childPositionValues)):
+            childStates.append(State(childPositionValues[i],self,self.cost + childCosts[i],self.heuristicType,self.map,self.planeValues))
 
         # NOTE: Use the sorted function to sort based on total cost of objects of the class.
         return sorted(childStates, key=lambda x: x.totalCost)
@@ -314,7 +407,7 @@ def astar(open:list[State],closed:list[State]= [],goal:bool =False) -> tuple[flo
             closed.append(currentState)
             successors = currentState.expand_state
             expandedNodes += 1
-            open = sorted(open + successors)
+            open = sorted(open + successors, key=lambda x: x.totalCost)
 
 
     if goal:
