@@ -3,11 +3,10 @@ import re
 import sys
 import time
 
-
 #TODO: Think about base cases and hot to save time by using them
 
 # GLOBAL VARIABLES:
-SOLDICT = ["↓", "→", "←", "↑", "w"]
+SOLDICT = {(0,-1):"↓",(-1,0): "→", (1,0):"←", (0,1):"↑",(0,0): "w"}
 OUTDIR = "src/parte-2/ASTAR-tests/outputs/"
 DEBUG = True
 
@@ -79,7 +78,7 @@ specified and returns a tuple with the data.
                     sys.exit(1)
             
             
-        print_d(f"NOTE: File {filename} processed correctly:\n \
+        print_d(f"NOTE -- File {filename} processed correctly:\n \
             \n * PLANES:{planeNumber} \n * VALUES: {planeValues} \n * MAP:{map} \n \n")
 
         return planeNumber, planeValues, map
@@ -175,6 +174,7 @@ class State:
             heuristicType:int,
             map:dict[tuple[int,int],str],
             planeGoals:list[tuple[int,int]]
+            
             ):
 
         self.planePositions= planePositions
@@ -194,12 +194,19 @@ class State:
 
         return string
 
+
     @property
     def heuristicCost(self) -> float:
+        # Use euler
         if self.heuristicType == 1:
             return self.heuristic_manhattan()
+        # Use manhattan
         elif self.heuristicType == 2:
             return self.heuristic_euler()
+        # Use dikstra
+        elif self.heuristicType == 0:
+            return 0
+        # Use dikstra but print the error
         else:
             print_d("ERROR: Invalid heuristic type")
             return 0
@@ -255,7 +262,7 @@ class State:
         :param Values: List of tuples with the positions to check
         """
         for elem in values:
-            if self.map[elem] != "G":
+            if self.map[elem] == "G":
                 return False
         return True
 
@@ -311,7 +318,6 @@ class State:
         :param Values: List of tuples with the moves of the planes
         """
         totalCost = 1
-        return totalCost
 
         for elem in values:
             if elem == (0,0):
@@ -341,9 +347,12 @@ class State:
         """
         input_set = self.possibleMoves
         n = len(self.planePositions)
+        # Initialize result list
+        result = ([], [])
 
         if n <= 0:
-            return ([], [])
+            print_d("ERROR -- Plane positions is empty")
+            return result
         
         # Convert set to sorted list for consistent ordering
         # For tuples, we sort based on both elements of the tuple
@@ -354,8 +363,6 @@ class State:
         # If we have k tuples and select n times, we get k^n combinations
         totalCombinations = setSize ** n
         
-        # Initialize result list
-        result = ([], [])
         
         # Generate each combination
         for i in range(totalCombinations):
@@ -381,7 +388,7 @@ class State:
                 if self.condition_free(positions) and self.condition_same_position(positions) and self.condition_cross(positions) and self.condition_wait(positions):
                     result[0].append(positions)
                     result[1].append(moves)
-            
+
         return result
    
 
@@ -428,43 +435,37 @@ def astar(open:list[State],closed:list[State]= [],goal:bool =False) -> tuple[flo
     initialHeuristic = currentState.heuristicCost
     
     while len(open) >= 1  or goal:
-        if len(open) == 1:
-            currentState:State = open.pop(0)
-            print_d(f"NOTE -- Current State: \n {currentState}\n")
-
-        elif len(open) > 1:
-            for elem in open: 
-                if not(closed.count(elem) >= 1):
-                    currentState:State = elem 
-                    print_d(f"NOTE -- Current State: \n {currentState}\n")
-                    
-        else:
-            print_d("WARNING -- No more states to expand")
-            break
-                
+        currentState = open.pop(0)
+        
         if currentState.finalState:
             print_d("NOTE -- Goal reached")
             goal = True
             break
 
-        elif expandedNodes > 10:
-            print_d("WARNING -- Too many expanded nodes")
+        if currentState in closed:
+            continue
+        
+        if expandedNodes > 20000:
             break
-        else:
-            closed.append(currentState)
-            successors = currentState.expand_state()
-            expandedNodes += 1
-            print_d(f"NOTE -- Expanded Nodes: {expandedNodes}")
-            sys.stdout.write("\033[F") # Cursor up one line
-            sys.stdout.write("\033[K") # Clear to the end of line
-            open = sorted(open + successors, key=lambda x: x.totalCost)
 
+        successors = currentState.expand_state()
+        open = sorted(open + successors, key=lambda x: x.totalCost)
+        expandedNodes += 1
+        print_d(f"NOTE -- Expanded Nodes: {expandedNodes}")
+        sys.stdout.write("\033[F") # Cursor up one line
+        sys.stdout.write("\033[K") # Clear to the end of line
+                    
 
     if goal:
         print_d(f"NOTE -- Finished A* algorithm") 
         return initialHeuristic,expandedNodes,currentState
+
+    elif len(open) == 0:
+        print_d(f"WARNING -- NO SOLUTIONS FOUND WITH {expandedNodes} EXPANDED NODES")
+        sys.exit(1)
+
     else:
-        print_d(f"WARNING -- NO SOLUTIONS FOUND")
+        print_d(f"WARNING -- EXITED A*")
         sys.exit(1)
 
 
@@ -479,7 +480,7 @@ def get_parse_solution(final_state:State) -> tuple[int,list[list[tuple[int,int]]
     :return (list): List of points for each plane
     :return (list): List of moves for each plane
     """
-    return  0,[[]],[]
+    return  0,[],[]
 
 
 def main():
@@ -490,9 +491,16 @@ def main():
     _, planeValues ,map = process_file(filename)
     heuristicType = int(sys.argv[2])
 
+    # Get planePositions and planeGoals
+    planeInitialPositions = []
+    planeGoals= []
+    for key in planeValues:
+        planeInitialPositions.append(planeValues[key][0])
+        planeGoals.append(planeValues[key][1])
+
     # --- ALGORITHM
     # Create the initial state with the given data
-    initialState = State(planeValues[0], None, 0,heuristicType,map,planeValues[1])
+    initialState = State(planeInitialPositions, None, 0,heuristicType,map,planeGoals)
     startASTARTime=time.time() # Start the timer for the A* algorithm
     initialHeuristic, expandedNodes,finalState= astar([initialState])
     makespan,solutionPoints,solutionMoves = get_parse_solution(finalState)
@@ -503,12 +511,17 @@ def main():
     # --- ALGORITHM
     
     # Print results
-    print_d(f"Total time: {totalTime}")
-    print_d(f"Total ASTAR time: {totalASTARTime}")
-    print_d(f"Makespan: {makespan}")
-    print_d(f"Heuristic Type: {heuristicType}")
-    print_d(f"Initial Heuristic: {initialHeuristic}")
-    print_d(f"Expanded Nodes: {expandedNodes}")
+    output = f"""\n
+    --------------------
+    Total time: {totalTime}
+    Total ASTAR time: {totalASTARTime}
+    Makespan:{makespan}
+    Heuristic Type:{heuristicType}
+    Initial Heuristic:{initialHeuristic}
+    Expanded Nodes: {expandedNodes}
+    -------------------\n
+    """
+    print_d(output)
 
     # Create output files
     create_output_files(filename,totalTime,makespan,heuristicType,initialHeuristic,expandedNodes,solutionMoves,solutionPoints)
