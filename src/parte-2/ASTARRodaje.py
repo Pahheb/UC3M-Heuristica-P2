@@ -173,8 +173,8 @@ class State:
             prev:"State|None",
             cost:float,
             heuristicType:int,
-            map: dict[tuple[int,int],str],
-            planeGoals :list[tuple[int,int]]
+            map:dict[tuple[int,int],str],
+            planeGoals:list[tuple[int,int]]
             ):
 
         self.planePositions= planePositions
@@ -183,6 +183,16 @@ class State:
         self.heuristicType = heuristicType
         self.map = map
         self.planeGoals= planeGoals 
+
+    def __str__(self) -> str:
+        string = (f"State:\n\
+        * planePositions: {self.planePositions}\n\
+        * Cost: {self.cost} \n\
+        * HeuristicCost: {self.heuristicCost}\n\
+        * TotalCost: {self.totalCost}\n\
+        * planeGoals: {self.planeGoals}\n")
+
+        return string
 
     @property
     def heuristicCost(self) -> float:
@@ -193,6 +203,7 @@ class State:
         else:
             print_d("ERROR: Invalid heuristic type")
             return 0
+
     @property
     def totalCost(self) -> float:
         return self.cost + self.heuristicCost
@@ -215,8 +226,25 @@ class State:
 
     @property
     def waitCost(self) -> float:
-        return 2
+        return 2.0
 
+    def heuristic_manhattan(self)-> float:
+        """
+        Compute the manhattan distance between the
+        current position and goal position of each plane,
+        then sum all the distances.
+        :return (float): Heuristic value
+        """
+
+        heuristicValues = []
+        for i in range(len(self.planePositions)):
+            initial = self.planePositions[i]
+            final = self.planeGoals[i]
+            heuristicValues.append(abs(final[0] - initial[0]) + abs(final[1] - initial[1]))
+        return max(heuristicValues)
+
+    def heuristic_euler(self)-> float:
+        return 0
 
     def condition_free(self,values:list[tuple[int,int]])-> bool:
         """
@@ -282,7 +310,8 @@ class State:
         Given a list of moves of a plane, get the cost of the state change.
         :param Values: List of tuples with the moves of the planes
         """
-        totalCost = 0
+        totalCost = 1
+        return totalCost
 
         for elem in values:
             if elem == (0,0):
@@ -346,6 +375,7 @@ class State:
             for i in range(len(moves)):
                 newPosition = moves[i][0] + self.planePositions[i][0],moves[i][1] + self.planePositions[i][1]
                 positions.append(newPosition)
+
             # Check conditions:
             if self.condition_in_map(positions):
                 if self.condition_free(positions) and self.condition_same_position(positions) and self.condition_cross(positions) and self.condition_wait(positions):
@@ -368,6 +398,7 @@ class State:
         childStates = []
         childCosts = []
         childPositionValues,childMoveValues = self.operator_move()
+
         # Create ChildStates:
         for elem in childMoveValues:
             childCosts.append(self.get_child_cost(elem))
@@ -378,24 +409,7 @@ class State:
         # NOTE: Use the sorted function to sort based on total cost of objects of the class.
         return sorted(childStates, key=lambda x: x.totalCost)
 
-    def heuristic_manhattan(self)-> float:
-        """
-        Compute the manhattan distance between the
-        current position and goal position of each plane,
-        then sum all the distances.
-        :return (float): Heuristic value
-        """
-
-        heuristicValues = []
-        for i in range(len(self.planePositions)):
-            initial = self.planePositions[i]
-            final = self.planeGoals[i]
-            heuristicValues.append(abs(final[0] - initial[0]) + abs(final[1] - initial[1]))
-        return max(heuristicValues)
-
-    def heuristic_euler(self)-> float:
-        return 0
-
+    
 
 def astar(open:list[State],closed:list[State]= [],goal:bool =False) -> tuple[float,int,State]:
     """
@@ -413,18 +427,28 @@ def astar(open:list[State],closed:list[State]= [],goal:bool =False) -> tuple[flo
     currentState:State = open[0]
     initialHeuristic = currentState.heuristicCost
     
-    while len(open) or goal:
+    while len(open) >= 1  or goal:
         if len(open) == 1:
             currentState:State = open.pop(0)
-        else:
+            print_d(f"NOTE -- Current State: \n {currentState}\n")
+
+        elif len(open) > 1:
             for elem in open: 
                 if not(closed.count(elem) >= 1):
                     currentState:State = elem 
                     break
+        else:
+            print_d("WARNING -- No more states to expand")
+            break
                 
         if currentState.finalState:
+            print_d("NOTE -- Goal reached")
             goal = True
-            break 
+            break
+
+        elif expandedNodes > 2000:
+            print_d("WARNING -- Too many expanded nodes")
+            break
         else:
             closed.append(currentState)
             successors = currentState.expand_state()
@@ -439,7 +463,7 @@ def astar(open:list[State],closed:list[State]= [],goal:bool =False) -> tuple[flo
         print_d(f"NOTE -- Finished A* algorithm") 
         return initialHeuristic,expandedNodes,currentState
     else:
-        print_d(f"WARNING - NO SOLUTIONS FOUND")
+        print_d(f"WARNING -- NO SOLUTIONS FOUND")
         sys.exit(1)
 
 
