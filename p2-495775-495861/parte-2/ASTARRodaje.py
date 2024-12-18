@@ -436,8 +436,7 @@ def astar(open:list[State],closed:list[State]= [],goal:bool =False) -> tuple[flo
             for elem in open: 
                 if not(closed.count(elem) >= 1):
                     currentState:State = elem 
-                    print_d(f"NOTE -- Current State: \n {currentState}\n")
-                    
+                    break
         else:
             print_d("WARNING -- No more states to expand")
             break
@@ -447,7 +446,7 @@ def astar(open:list[State],closed:list[State]= [],goal:bool =False) -> tuple[flo
             goal = True
             break
 
-        elif expandedNodes > 10:
+        elif expandedNodes > 2000:
             print_d("WARNING -- Too many expanded nodes")
             break
         else:
