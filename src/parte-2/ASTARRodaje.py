@@ -248,6 +248,7 @@ class State:
         """
         Compute the euclidean distance between the
         current position and the goal position of each plane.
+        :return (float): Heuristic value
         """
         heuristicsValues = []
         for i in range(len(self.planePositions)):
@@ -255,6 +256,15 @@ class State:
             final = self.planeGoals[i]
             heuristicsValues.append(math.sqrt((final[0] - initial[0])**2 + (final[1] - initial[1])**2))
         return max(heuristicsValues)
+    
+    def heuristic_floydWarshall(self)-> float:
+        """
+        Compute the Floyd-Warshall algorithm, used for
+        calculating the optimal cost between a couple of
+        edges.
+        :return (float): Heuristic value
+        """
+        return 0
 
     def condition_free(self,values:list[tuple[int,int]])-> bool:
         """
