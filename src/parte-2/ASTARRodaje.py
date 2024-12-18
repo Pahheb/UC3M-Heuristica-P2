@@ -7,8 +7,12 @@ import time
 
 # GLOBAL VARIABLES:
 SOLDICT = {(0,-1):"↓",(-1,0): "→", (1,0):"←", (0,1):"↑",(0,0): "w"}
-OUTDIR = "src/parte-2/ASTAR-tests/outputs/"
+OUTDIR = "./ASTAR-tests/outputs"
+# NOTE: The OUTDIR for development is different form the delivery one
+# OUTDIR = "./ASTAR-tests/"
 DEBUG = True
+
+
 
 def print_d(data):
     """
@@ -18,9 +22,6 @@ def print_d(data):
     if DEBUG:
         print(data)
 
-
-# NOTE: The OUTDIR for development is different form the delivery one
-# OUTDIR = ".src/parte-2/ASTAR-tests/"
 
 def process_file(filename: str) -> tuple[int, dict[int,list], dict[tuple,str]]:
     """
@@ -77,7 +78,13 @@ specified and returns a tuple with the data.
                     print_d(f"ERROR: {filename} -> No map values found")
                     sys.exit(1)
             
-            
+        # Check that forall planes: initial and goal values are valid
+        for key in planeValues:
+            startGoal = planeValues[key]
+            if map.get(startGoal[0]) and map.get(startGoal[1]) and (map[startGoal[0]] == "G" or map[startGoal[1]] =="G"):
+                print_d(f"ERROR: {filename} -> Invalid initial or goal value for plane {key}")
+
+
         print_d(f"NOTE -- File {filename} processed correctly:\n \
             \n * PLANES:{planeNumber} \n * VALUES: {planeValues} \n * MAP:{map} \n \n")
 
@@ -121,7 +128,7 @@ def create_output_files(
         return False
     for element in solutionMoves:
         for value in element:
-            if value not in SOLDICT:
+            if value not in SOLDICT.values():
                 print_d(f"ERROR --- create_output_files() --- Unvalid character ({value}) in solution")
     if len(solutionMoves) != len(solutionPoints):
         print_d(f"ERROR --- create_output_files() --- Unvalid solution list (diff total len)")
@@ -132,12 +139,12 @@ def create_output_files(
 
     # Create output filenames
     mapName = os.path.basename(filename).split(".")[0]
-    testDirName = os.path.dirname(filename)
-    outputFilename = f"{testDirName}/{mapName}_{heuristicType}.output"
-    statFilename = f"{testDirName}/{mapName}_{heuristicType}.stat"
+    #testDirName = os.path.dirname(filename)
+    outputFilename = f"{OUTDIR}/{mapName}_{heuristicType}.output"
+    statFilename = f"{OUTDIR}/{mapName}_{heuristicType}.stat"
 
     # Create stat contents:
-    statContents = f"Tiempo total: {totalTime}\nMakespan: {makespan}\nHeurística inicial: {initialHeuristic}\nNodos expandidos: {expandedNodes}"
+    statContents = f"Tiempo total: {totalTime}s\nMakespan: {makespan}\nh inicial: {initialHeuristic}\nNodos expandidos: {expandedNodes}"
 
     # Create output contents:
     outputContents = f""""""
@@ -152,14 +159,18 @@ def create_output_files(
 
     # Create files
     try:
-        with open(OUTDIR+outputFilename, "w") as outputFile:
+        with open(outputFilename, "w") as outputFile:
             outputFile.write(str(outputContents))
+            print_d(f"NOTE --- Succesfully created {outputFilename}")
     except:
+        print_d(f"ERROR --- create_output_files() --- Error while creating .output file")
         return False
     try:
-        with open(OUTDIR+statFilename, "w") as statFile:
+        with open(statFilename, "w") as statFile:
             statFile.write(statContents)
+            print_d(f"NOTE --- Succesfully created {statFilename}")
     except:
+        print_d(f"ERROR --- create_output_files() --- Error while creating .stat file")
         return False
 
     return True
@@ -298,9 +309,12 @@ class State:
         of values with the current positions of the planes.
         :param Values: List of tuples with the positions to
         """
-        for i in range(len(self.planePositions)):
-            for j in range(len(values)):
-                if self.planePositions[i] == values[j] and values[i] == self.planePositions[j]:
+        
+        for i in range(len(values)):
+            for j in range(len(self.planePositions)):
+                if i == j:
+                    continue
+                if self.planePositions[j] == values[i] and values[j] == self.planePositions[i]:
                     return False
                     
         return True
@@ -366,7 +380,6 @@ class State:
         # If we have k tuples and select n times, we get k^n combinations
         totalCombinations = setSize ** n
         
-        
         # Generate each combination
         for i in range(totalCombinations):
             # Current combination
@@ -387,20 +400,24 @@ class State:
                 positions.append(newPosition)
 
             # Check conditions:
-            print_d(f"MOVES_PRE: {moves}")
+            #print_d(f"MOVES_PRE: {moves}")
+            #print_d(f"POS_PRE: {positions}")
             if self.condition_in_map(positions):
-                print_d(f"MOVES_MAP: {moves}")
+                #print_d(f"MOVES_MAP: {moves}")
+                #print_d(f"POS_MAP: {positions}")
                 if self.condition_free(positions):
-                    print_d(f"MOVES_FREE: {moves}")
+                    #print_d(f"MOVES_FREE: {moves}")
+                    #print_d(f"POS_FREE: {positions}")
                     if self.condition_same_position(positions):
-                        print_d(f"MOVES_SAME: {moves}")
+                        #print_d(f"MOVES_SAME: {moves}")
+                        #print_d(f"POS_SAME: {positions}")
                         if self.condition_wait(positions):
-                            print_d(f"MOVES_WAIT: {moves}")
+                            #print_d(f"MOVES_WAIT: {moves}")
+                            #print_d(f"POS_WAIT: {positions}")
                             if self.condition_cross(positions):
                                 result[0].append(positions)
-                                #print_d(f"MOVES:{moves}")
                                 result[1].append(moves)
-                                print_d(f"MOVES_POST: {moves}")
+                                #print_d(f"MOVES_POST: {moves}")
         return result
    
 
@@ -522,7 +539,7 @@ def main():
         planeInitialPositions.append(planeValues[key][0])
         planeGoals.append(planeValues[key][1])
 
-    # --- ALGORITHM
+    # --- CALL ALGORITHM
     # Create the initial state with the given data
     initialState = State(planeInitialPositions, None, 0,heuristicType,map,planeGoals)
     startASTARTime=time.time() # Start the timer for the A* algorithm
@@ -532,13 +549,13 @@ def main():
     # Time calculations
     totalASTARTime = endTime- startASTARTime
     totalTime = endTime - startTime
-    # --- ALGORITHM
+    # --- CALL ALGORITHM
     
     # Print results
     output = f"""\n
     --------------------
-    Total time: {totalTime}
-    Total ASTAR time: {totalASTARTime}
+    Total time: {totalTime} s 
+    Total ASTAR time: {totalASTARTime} s
     Makespan: {makespan}
     Heuristic Type: {heuristicType}
     Initial Heuristic: {initialHeuristic}
@@ -548,7 +565,10 @@ def main():
     print_d(output)
 
     # Create output files
-    create_output_files(filename,totalTime,makespan,heuristicType,initialHeuristic,expandedNodes,solutionMoves,solutionPoints)
+    solutionTestMoves = [["↓", "→"], ["←", "↑","w"]]
+    solutionTestPoints = [[(2,3),(2,3),(2,3)],[(2,3),(2,3),(2,3),(2,3)]]
+    if not (create_output_files(filename,totalTime,makespan,heuristicType,initialHeuristic,expandedNodes,solutionTestMoves,solutionTestPoints)):
+        print_d("WARNING -- Output files not properly created")
 
 
 
