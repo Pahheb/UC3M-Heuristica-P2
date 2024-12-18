@@ -11,6 +11,15 @@ SOLDICT = ["↓", "→", "←", "↑", "w"]
 OUTDIR = "src/parte-2/ASTAR-tests/outputs/"
 DEBUG = True
 
+def print_d(data):
+    """
+    Debug function to print only in debug mode:
+    Debug mode -> DEBUG = True
+    """
+    if DEBUG:
+        print(data)
+
+
 # NOTE: The OUTDIR for development is different form the delivery one
 # OUTDIR = ".src/parte-2/ASTAR-tests/"
 
@@ -47,33 +56,39 @@ specified and returns a tuple with the data.
                 # Add the values to the list
                 planeValues[i - 1] = valuePair
             else:
-                print(f"ERROR: {filename} -> Position formatting seems to be wrong")
+                print_d(f"ERROR: {filename} -> Position formatting seems to be wrong")
                 sys.exit(1)
 
         mapLine = 0
+
         for i in range(planeNumber + 1, len(lines)):
             pattern = r"[ABG]"
             notPattern = r"[^ABG;\n]"
             match = re.findall(pattern, lines[i])
             notMatch = re.findall(notPattern, lines[i])
             if notMatch:
-                print(f"ERROR: {filename} -> Map formatting seems to be wrong")
+                print_d(f"ERROR: {filename} -> Map formatting seems to be wrong")
                 sys.exit(1)
             else:
                 if match:
                     for i in range(len(match)):
                         map[(mapLine, i)] = match[i]
-            mapLine = +1
-        print(f"NOTE: File {filename} processed correctly:\
-            \n {planeNumber} planes\n {planeValues} values\n {map} map")
+                    mapLine += 1
+                else:
+                    print_d(f"ERROR: {filename} -> No map values found")
+                    sys.exit(1)
+            
+            
+        print_d(f"NOTE: File {filename} processed correctly:\
+            \n * PLANES:{planeNumber} \n * VALUES: {planeValues} \n * MAP:{map} ")
 
         return planeNumber, planeValues, map
 
     except FileNotFoundError:
-        print(f"ERROR: The file {filename} was not found")
+        print_d(f"ERROR: The file {filename} was not found")
         sys.exit(1)
     except ValueError:
-        print(f"ERROR: THe file {filename} is not properly encoded")
+        print_d(f"ERROR: THe file {filename} is not properly encoded")
         sys.exit(1)
 
 
@@ -100,21 +115,21 @@ def create_output_files(
 
     # Parameter check:
     if heuristicType != 1 and heuristicType != 2:
-        print(f"ERROR --- create_output_files() --- Unvalid heuristicType value")
+        print_d(f"ERROR --- create_output_files() --- Unvalid heuristicType value")
         return False
     if totalTime < 0:
-        print(f"ERROR --- create_output_files() --- Unvalid totalTime value (negative)")
+        print_d(f"ERROR --- create_output_files() --- Unvalid totalTime value (negative)")
         return False
     for element in solutionMoves:
         for value in element:
             if value not in SOLDICT:
-                print(f"ERROR --- create_output_files() --- Unvalid character ({value}) in solution")
+                print_d(f"ERROR --- create_output_files() --- Unvalid character ({value}) in solution")
     if len(solutionMoves) != len(solutionPoints):
-        print(f"ERROR --- create_output_files() --- Unvalid solution list (diff total len)")
+        print_d(f"ERROR --- create_output_files() --- Unvalid solution list (diff total len)")
 
         for i in range(len(solutionMoves)):
             if len(solutionMoves[i]) + 1 != len(solutionPoints[i]):
-                print(f"ERROR --- create_output_files() --- Unvalid solution list (diff list len)")
+                print_d(f"ERROR --- create_output_files() --- Unvalid solution list (diff list len)")
 
     # Create output filenames
     mapName = os.path.basename(filename).split(".")[0]
@@ -154,20 +169,20 @@ def create_output_files(
 class State:
     def __init__(
             self,
-            positionValues:list,
+            planePositions:list[tuple[int,int]],
             prev:"State|None",
             cost:float,
             heuristicType:int,
-            map: dict,
-            planeValues:dict,
+            map: dict[tuple[int,int],str],
+            planeGoals :list[tuple[int,int]]
             ):
 
-        self.positionValues= positionValues
+        self.planePositions= planePositions
         self.prev = prev
         self.cost = cost
         self.heuristicType = heuristicType
         self.map = map
-        self.planeValues= planeValues
+        self.planeGoals= planeGoals 
 
     @property
     def heuristicCost(self) -> float:
@@ -176,18 +191,11 @@ class State:
         elif self.heuristicType == 2:
             return self.heuristic_euler()
         else:
-            print("ERROR: Invalid heuristic type")
+            print_d("ERROR: Invalid heuristic type")
             return 0
     @property
     def totalCost(self) -> float:
         return self.cost + self.heuristicCost
-
-    @property
-    def planeGoals(self) -> list[tuple[int,int]]:
-        planeGoals = []
-        for key in self.planeValues:
-            planeGoals.append(self.planeValues[key][1])
-        return planeGoals
 
 
     @property
@@ -201,7 +209,7 @@ class State:
 
     @property
     def finalState(self) -> bool: 
-        if self.planeValues == self.planeGoals:
+        if self.planePositions == self.planeGoals:
             return True
         return False
 
@@ -223,6 +231,17 @@ class State:
                 return False
         return True
 
+    def condition_in_map(self,values:list[tuple[int,int]])-> bool:
+        """
+        Check that all the positions in the list are 
+        inside the map.
+        :param Values: List of tuples with the positions to check
+        """
+        for elem in values:
+            if not self.map.get(elem):
+                return False
+        return True
+
     def condition_same_position(self,values:list[tuple[int,int]])-> bool:
         """
         Check that no two values in the list are the same.
@@ -240,10 +259,11 @@ class State:
         of values with the current positions of the planes.
         :param Values: List of tuples with the positions to
         """
-        for i in range(len(self.planeValues)):
+        for i in range(len(self.planePositions)):
             for j in range(len(values)):
-                if self.planeValues[i] == values[j] and values[j] == self.planeValues[j]:
+                if self.planePositions[i] == values[j] and values[j] == self.planePositions[j]:
                     return False
+                    
         return True
 
     def condition_wait(self,values:list[tuple[int,int]])-> bool:
@@ -252,7 +272,7 @@ class State:
         :param Values: List of tuples with the positions to check
         """
         for i in range(len(values)):
-            if values[i] == self.planeValues[i] and self.map[values[i]] == "A":
+            if values[i] == self.planePositions[i] and self.map[values[i]] == "A":
                 return False
         return True
 
@@ -291,7 +311,7 @@ class State:
 
         """
         input_set = self.possibleMoves
-        n = len(self.planeValues)
+        n = len(self.planePositions)
 
         if n <= 0:
             return ([], [])
@@ -299,17 +319,17 @@ class State:
         # Convert set to sorted list for consistent ordering
         # For tuples, we sort based on both elements of the tuple
         elements = sorted(list(input_set), key=lambda x: (x[0], x[1]))
-        set_size = len(elements)
+        setSize = len(elements)
         
         # Total number of combinations remains the same
         # If we have k tuples and select n times, we get k^n combinations
-        total_combinations = set_size ** n
+        totalCombinations = setSize ** n
         
         # Initialize result list
         result = ([], [])
         
         # Generate each combination
-        for i in range(total_combinations):
+        for i in range(totalCombinations):
             # Current combination
             moves = []
             # List of tuples with the new positions
@@ -319,16 +339,18 @@ class State:
             # The base conversion process remains the same
             # But now each selected element is a tuple instead of a number
             for _ in range(n):
-                moves.append(elements[temp % set_size])
-                temp //= set_size
+                moves.append(elements[temp % setSize])
+                temp //= setSize 
             
             # Apply moves to current position 
             for i in range(len(moves)):
-                positions[i] = (moves[i][0] + self.positionValues[i][0],moves[i][1] + self.positionValues[i][1])
+                newPosition = moves[i][0] + self.planePositions[i][0],moves[i][1] + self.planePositions[i][1]
+                positions.append(newPosition)
             # Check conditions:
-            if self.condition_free(positions) and self.condition_same_position(positions) and self.condition_cross(positions) and self.condition_wait(positions):
-                result[0].append(positions)
-                result[1].append(moves)
+            if self.condition_in_map(positions):
+                if self.condition_free(positions) and self.condition_same_position(positions) and self.condition_cross(positions) and self.condition_wait(positions):
+                    result[0].append(positions)
+                    result[1].append(moves)
             
         return result
    
@@ -351,7 +373,7 @@ class State:
             childCosts.append(self.get_child_cost(elem))
 
         for i in range(len(childPositionValues)):
-            childStates.append(State(childPositionValues[i],self,self.cost + childCosts[i],self.heuristicType,self.map,self.planeValues))
+            childStates.append(State(childPositionValues[i],self,self.cost + childCosts[i],self.heuristicType,self.map,self.planeGoals))
 
         # NOTE: Use the sorted function to sort based on total cost of objects of the class.
         return sorted(childStates, key=lambda x: x.totalCost)
@@ -365,9 +387,9 @@ class State:
         """
 
         heuristicValue = 0
-        for key in self.planeValues:
-            initial = self.planeValues[key][0]
-            final = self.planeValues[key][1]
+        for i in range(len(self.planePositions)):
+            initial = self.planePositions[i]
+            final = self.planeGoals[i]
             heuristicValue += abs(final[0] - initial[0]) + abs(final[1] - initial[1])
         return heuristicValue 
 
@@ -405,7 +427,7 @@ def astar(open:list[State],closed:list[State]= [],goal:bool =False) -> tuple[flo
             break 
         else:
             closed.append(currentState)
-            successors = currentState.expand_state
+            successors = currentState.expand_state()
             expandedNodes += 1
             open = sorted(open + successors, key=lambda x: x.totalCost)
 
@@ -413,7 +435,7 @@ def astar(open:list[State],closed:list[State]= [],goal:bool =False) -> tuple[flo
     if goal:
         return initialHeuristic,expandedNodes,currentState
     else:
-        print(f"WARNING - NO SOLUTIONS FOUND")
+        print_d(f"WARNING - NO SOLUTIONS FOUND")
         sys.exit(1)
 
 
@@ -441,9 +463,10 @@ def main():
 
     # --- ALGORITHM
     # Create the initial state with the given data
-    initialState = State(planeValues[0], None, 0,heuristicType,map,planeValues)
+    initialState = State(planeValues[0], None, 0,heuristicType,map,planeValues[1])
     startASTARTime=time.time() # Start the timer for the A* algorithm
     initialHeuristic, expandedNodes,finalState= astar([initialState])
+    print_d(f"NOTE -- Finished A* algorithm") 
     makespan,solutionPoints,solutionMoves = get_parse_solution(finalState)
     endTime=time.time() # Stop all timers
     # Time calculations
@@ -452,13 +475,12 @@ def main():
     # --- ALGORITHM
     
     # Print results
-    if DEBUG:
-        print(f"Total time: {totalTime}")
-        print(f"Total ASTAR time: {totalASTARTime}")
-        print(f"Makespan: {makespan}")
-        print(f"Heuristic Type: {heuristicType}")
-        print(f"Initial Heuristic: {initialHeuristic}")
-        print(f"Expanded Nodes: {expandedNodes}")
+    print_d(f"Total time: {totalTime}")
+    print_d(f"Total ASTAR time: {totalASTARTime}")
+    print_d(f"Makespan: {makespan}")
+    print_d(f"Heuristic Type: {heuristicType}")
+    print_d(f"Initial Heuristic: {initialHeuristic}")
+    print_d(f"Expanded Nodes: {expandedNodes}")
 
     # Create output files
     create_output_files(filename,totalTime,makespan,heuristicType,initialHeuristic,expandedNodes,solutionMoves,solutionPoints)
