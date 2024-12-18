@@ -206,8 +206,11 @@ def main():
 
     logging.info(f"Problem variables: {problem._variables}\n")
     logging.info("--- Problem Solver Started ---")
-    solutions = problem.getSolutions()
-        
+    try:
+        solutions = problem.getSolutions()
+    except KeyError as e:
+        logging.info(f"--- An error has been detected --- {e}")
+        solutions = []
     end = time.time()
     
     file_name_without_extension = os.path.splitext(os.path.basename(routeToInitFile))[0]    
