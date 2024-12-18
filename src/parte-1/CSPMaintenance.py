@@ -132,9 +132,8 @@ def main():
     for plane in planes:
         if plane.t1_duties + plane.t2_duties < slots:
             restantes = slots - (plane.t1_duties + plane.t2_duties)
-            for i in range(0, restantes, 1):
-                variable = [f"av_{plane.id}_{plane.model}_{slots - i}"]
-
+            for i in range(restantes, slots + 1, 1):
+                variable = [f"av_{plane.id}_{plane.model}_{i}"]
                 def enforce_parking(*args):
                     """
                     Función de restricción: asegura que los aviones que tengan menos tareas que slots se asignen a posiciones 
