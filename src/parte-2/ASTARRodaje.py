@@ -79,8 +79,8 @@ specified and returns a tuple with the data.
                     sys.exit(1)
             
             
-        print_d(f"NOTE: File {filename} processed correctly:\
-            \n * PLANES:{planeNumber} \n * VALUES: {planeValues} \n * MAP:{map} ")
+        print_d(f"NOTE: File {filename} processed correctly:\n \
+            \n * PLANES:{planeNumber} \n * VALUES: {planeValues} \n * MAP:{map} \n \n")
 
         return planeNumber, planeValues, map
 
@@ -290,7 +290,7 @@ class State:
             else:
                 totalCost += 1
 
-        return totalCost
+        return totalCost/len(values)
 
     def operator_move(self) -> tuple[list[list[tuple[int,int]]],list[list[tuple[int,int]]]]:
         """
@@ -386,12 +386,12 @@ class State:
         :return (float): Heuristic value
         """
 
-        heuristicValue = 0
+        heuristicValues = []
         for i in range(len(self.planePositions)):
             initial = self.planePositions[i]
             final = self.planeGoals[i]
-            heuristicValue += abs(final[0] - initial[0]) + abs(final[1] - initial[1])
-        return heuristicValue 
+            heuristicValues.append(abs(final[0] - initial[0]) + abs(final[1] - initial[1]))
+        return max(heuristicValues)
 
     def heuristic_euler(self)-> float:
         return 0
@@ -429,10 +429,14 @@ def astar(open:list[State],closed:list[State]= [],goal:bool =False) -> tuple[flo
             closed.append(currentState)
             successors = currentState.expand_state()
             expandedNodes += 1
+            print_d(f"NOTE -- Expanded Nodes: {expandedNodes}")
+            sys.stdout.write("\033[F") # Cursor up one line
+            sys.stdout.write("\033[K") # Clear to the end of line
             open = sorted(open + successors, key=lambda x: x.totalCost)
 
 
     if goal:
+        print_d(f"NOTE -- Finished A* algorithm") 
         return initialHeuristic,expandedNodes,currentState
     else:
         print_d(f"WARNING - NO SOLUTIONS FOUND")
@@ -466,7 +470,6 @@ def main():
     initialState = State(planeValues[0], None, 0,heuristicType,map,planeValues[1])
     startASTARTime=time.time() # Start the timer for the A* algorithm
     initialHeuristic, expandedNodes,finalState= astar([initialState])
-    print_d(f"NOTE -- Finished A* algorithm") 
     makespan,solutionPoints,solutionMoves = get_parse_solution(finalState)
     endTime=time.time() # Stop all timers
     # Time calculations
