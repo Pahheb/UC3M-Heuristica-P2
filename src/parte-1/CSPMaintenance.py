@@ -1,4 +1,6 @@
-from utils.file_processor import process_initial_file
+"""
+This file contains the main program for the CSP part 1 HyO lab. For more information, please visit the memory.
+"""
 
 import sys
 import logging
@@ -8,6 +10,232 @@ import os
 logger = logging.getLogger(__name__)
 
 from constraint import *
+
+class Plane:
+    """
+    Class used for creating Plane instances for saving the data in a more precise and concise way.
+    """
+    VALID_MODELS = {"STD", "JMB"}  # Conjunto de modelos válidos
+
+    def __init__(self, id: int, model: str, restriction: bool, t1_duties: int, t2_duties: int):
+        """
+        Initialize a Plane instance with the provided attributes.
+        """
+        self.id = id
+        self.model = model
+        self.restriction = restriction
+        self.t1_duties = t1_duties
+        self.t2_duties = t2_duties
+
+    def __repr__(self):
+        """
+        String representation of the Plane object.
+        """
+        return (
+            f"Plane(id={self.id}, model={self.model}, restr={self.restriction}, "
+            f"t1_duties={self.t1_duties}, t2_duties={self.t2_duties})"
+        )
+
+    def __hash__(self):
+        return hash(self.id)
+    
+        # Métodos de comparación
+    def __lt__(self, other):
+        return self.id < other.id
+
+    def __le__(self, other):
+        return self.id <= other.id
+
+    def __eq__(self, other):
+        return self.id == other.id
+
+    def __gt__(self, other):
+        return self.id > other.id
+
+    def __ge__(self, other):
+        return self.id >= other.id
+
+    @property
+    def id(self):
+        return self._id
+
+    @id.setter
+    def id(self, id):
+        if not isinstance(id, int) or id <= 0:
+            raise ValueError("The id of the plane must be a positive integer.")
+        self._id = id
+
+    @property
+    def model(self):
+        return self._model
+
+    @model.setter
+    def model(self, model):
+        if not isinstance(model, str) or model not in self.VALID_MODELS:
+            raise ValueError(f"Model must be one of {self.VALID_MODELS}.")
+        self._model = model
+
+    @property
+    def restriction(self):
+        return self._restriction
+
+    @restriction.setter
+    def restriction(self, restriction):
+        if not isinstance(restriction, bool):
+            raise TypeError("Restriction must be a boolean value.")
+        self._restriction = restriction
+
+    @property
+    def t1_duties(self):
+        return self._t1_duties
+
+    @t1_duties.setter
+    def t1_duties(self, t1_duties):
+        if not isinstance(t1_duties, int) or t1_duties < 0:
+            raise ValueError("T1_duties must be a non-negative integer.")
+        self._t1_duties = t1_duties
+
+    @property
+    def t2_duties(self):
+        return self._t2_duties
+
+    @t2_duties.setter
+    def t2_duties(self, t2_duties):
+        if not isinstance(t2_duties, int) or t2_duties < 0:
+            raise ValueError("T2_duties must be a non-negative integer.")
+        self._t2_duties = t2_duties
+
+class STD_Mechanic():
+    def __init__(self, i: int, j: int):
+        self.x = i
+        self.y = j
+        
+    def __repr__(self):
+        return f"STD_Mechanic(x={self.x}, y={self.y})"
+        
+    @property
+    def i(self):
+        return self._i
+    
+    @i.setter
+    def i(self, i):
+        if type(i) != int:
+            raise TypeError("i position must be an integer")
+        
+    @property
+    def j(self):
+        return self._j
+    
+    @j.setter
+    def j(self, j):
+        if type(j) != int:
+            raise TypeError("j position must be an integer")
+
+class SPC_Mechanic():
+    def __init__(self, i: int, j: int):
+        self.x = i
+        self.y = j
+
+    def __repr__(self):
+        return f"SPC_Mechanic(x={self.x}, y={self.y})"
+
+    @property
+    def i(self):
+        return self._i
+    
+    @i.setter
+    def i(self, i):
+        if type(i) != int:
+            raise TypeError("i position must be an integer")
+        
+    @property
+    def j(self):
+        return self._j
+    
+    @j.setter
+    def j(self, j):
+        if type(j) != int:
+            raise TypeError("j position must be an integer")
+
+class Parking():
+    def __init__(self, i: int, j: int):
+        self.x = i
+        self.y = j
+        
+    def __repr__(self):
+        return f"Parking(x={self.x}, y={self.y})"
+        
+    @property
+    def i(self):
+        return self._i
+    
+    @i.setter
+    def i(self, i):
+        if type(i) != int:
+            raise TypeError("i position must be an integer")
+        
+    @property
+    def j(self):
+        return self._j
+    
+    @j.setter
+    def j(self, j):
+        if type(j) != int:
+            raise TypeError("j position must be an integer")
+
+def process_initial_file(route: str):
+    with open(route, "r") as f:
+        lines = f.readlines()
+
+    if len(lines) < 6:
+        raise ValueError("File does not have enough lines to be correctly processed")
+
+    # 1. Número de franjas horarias
+    franjas = int(lines[0].split(":")[1].strip())
+
+    # 2. matrix size (we assume it will always be a square?)
+    matriz_size = tuple(map(int, lines[1].strip().split("x")))
+
+    # 3. std mechanic
+    std_positions = [
+        STD_Mechanic(*map(int, pos.strip("()").split(",")))
+        for pos in lines[2].split(":")[1].strip().split()
+    ]
+    # 4. spc mechanic
+    spc_positions = [
+        SPC_Mechanic(*map(int, pos.strip("()").split(",")))
+        for pos in lines[3].split(":")[1].strip().split()
+    ]
+    # 5. parking
+    prk_positions = [
+        Parking(*map(int, pos.strip("()").split(",")))
+        for pos in lines[4].split(":")[1].strip().split()
+    ]
+    # 6. plane data
+    planes = []
+    for line in lines[5:]:
+        plane_data = line.strip().split("-")
+        plane = Plane(
+            id = int(plane_data[0]),
+            model = plane_data[1],
+            restriction = plane_data[2] == "T",  # True para restricciones tipo 2 antes de tipo 1
+            t1_duties = int(plane_data[3]),
+            t2_duties = int(plane_data[4]),
+        )
+
+        planes.append(plane)
+
+    # json structures file
+    parsed_data = {
+        "franjas": franjas,
+        "matriz_size": matriz_size,
+        "std_positions": std_positions,
+        "spc_positions": spc_positions,
+        "prk_positions": prk_positions,
+        "planes": planes,
+    }
+    
+    return parsed_data
 
 def main():
     st = time.time()
@@ -42,14 +270,9 @@ def main():
     problem = Problem()
     logging.info("--- Creation of variable and domain asignation ---")
     for plane in planes:
-        if plane.t1_duties + plane.t2_duties == 0: # si no hay tareas, el avión siempre tiene que estar en un parking
-            for slot in range(slots):
-                variable_name = f"av_{plane.id}_{plane.model}_{slot + 1}"
-                problem.addVariable(variable_name, prk_formatted_positions)    
-        else:          
-            for slot in range(slots):
-                variable_name = f"av_{plane.id}_{plane.model}_{slot + 1}"
-                problem.addVariable(variable_name, planeDomain)
+        for slot in range(slots):
+            variable_name = f"av_{plane.id}_{plane.model}_{slot + 1}"
+            problem.addVariable(variable_name, planeDomain)
     
     # Restricción 1: En cada franja horaria (slot), ningún avión puede compartir la misma posición
     for slot in range(slots):
@@ -127,29 +350,6 @@ def main():
                 # Añadir la restricción para las variables del avión con tareas tipo 2
                 problem.addConstraint(enforce_task_order, variable)
     
-    # hay una restricción implicita que no hemos programado todavía: si hemos hecho todas las 
-    # tareas, nuestro avión solamente puede estacionarse en parkings (esto es una asunción, está mencionada en la práctica)
-    for plane in planes:
-        if plane.t1_duties + plane.t2_duties < slots:
-            restantes = slots - (plane.t1_duties + plane.t2_duties)
-            for i in range(restantes, slots + 1, 1):
-                variable = [f"av_{plane.id}_{plane.model}_{i}"]
-                def enforce_parking(*args):
-                    """
-                    Función de restricción: asegura que los aviones que tengan menos tareas que slots se asignen a posiciones 
-                    válidas de parkings cuando acaben de hacer todas sus tareas
-                    - args: las posibles asignaciones de valores ((i, j),) para las variables.
-                    """
-                    # Extraer las posiciones válidas (i, j)
-                    positions = [val for val in args if val is not None]
-                    for pos in positions:
-                        if pos in prk_formatted_positions:
-                            # si la posición existe en los talleres especialistas, hemos acabado
-                            return True
-                    return False
-
-                problem.addConstraint(enforce_parking, variable)
-
     # Restricción 5: Ningún par de aviones puede estar en posiciones adyacentes en la misma franja horaria
     for slot in range(slots):
         # for each slot, generate al JMB plane variables

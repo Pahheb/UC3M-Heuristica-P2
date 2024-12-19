@@ -2,6 +2,7 @@ import os
 import re
 import sys
 import time
+import math
 
 #TODO: Think about base cases and hot to save time by using them
 
@@ -214,12 +215,16 @@ class State:
             return self.heuristic_manhattan()
         # Use manhattan
         elif self.heuristicType == 2:
+<<<<<<< HEAD
             return self.heuristic_manhattan()
             #return self.heuristic_euler()
         # Use dikstra
         elif self.heuristicType == 0:
             return 0
         # Use dikstra but print the error
+=======
+            return self.heuristic_euclidean()
+>>>>>>> c0e4fab5a66684bfc4444eac2911bf74b065ddb5
         else:
             print_d("ERROR: Invalid heuristic type")
             return 0
@@ -266,7 +271,26 @@ class State:
             heuristicValues.append(abs(final[0] - initial[0]) + abs(final[1] - initial[1]))
         return max(heuristicValues)
 
-    def heuristic_euler(self)-> float:
+    def heuristic_euclidean(self)-> float:
+        """
+        Compute the euclidean distance between the
+        current position and the goal position of each plane.
+        :return (float): Heuristic value
+        """
+        heuristicsValues = []
+        for i in range(len(self.planePositions)):
+            initial = self.planePositions[i]
+            final = self.planeGoals[i]
+            heuristicsValues.append(math.sqrt((final[0] - initial[0])**2 + (final[1] - initial[1])**2))
+        return max(heuristicsValues)
+    
+    def heuristic_floydWarshall(self)-> float:
+        """
+        Compute the Floyd-Warshall algorithm, used for
+        calculating the optimal cost between a couple of
+        edges.
+        :return (float): Heuristic value
+        """
         return 0
 
     def condition_free(self,values:list[tuple[int,int]])-> bool:
@@ -555,6 +579,54 @@ def get_parse_solution(final_state: State) -> tuple[int, list[list[tuple[int, in
         
     return makespan, position_sequences, move_sequences
 
+def heuristic_floydWarshall(map: dict) -> float:
+    """
+    Compute the Floyd-Warshall algorithm, used for
+    calculating the optimal cost between a couple of
+    edges.
+    :return (float): Heuristic value
+    """
+    # Initialize the mapping from node indices to their positions
+    n = 1
+    nodes = {}
+    for i in map.keys():
+        nodes[n] = i
+        n += 1
+
+    num_nodes = len(nodes)
+
+    # Initialize the distance matrix with infinities
+    distanceArray = [[float('inf')] * num_nodes for _ in range(num_nodes)]
+
+    # Distance from a node to itself is 0
+    for i in range(num_nodes):
+        distanceArray[i][i] = 0
+
+    # Populate the adjacency matrix
+    for i in range(1, num_nodes + 1):  # Adjusting range to match nodes
+        for j in range(1, num_nodes + 1):
+            if i != j:
+                pos_i = nodes[i]
+                pos_j = nodes[j]
+
+                # Check if positions are adjacent (Manhattan distance of 1)
+                if abs(pos_i[0] - pos_j[0]) + abs(pos_i[1] - pos_j[1]) == 1:
+                    distanceArray[i - 1][j - 1] = 1  # Adjust for zero-based indexing
+
+    # Floyd-Warshall algorithm
+    for k in range(num_nodes):
+        for i in range(num_nodes):
+            for j in range(num_nodes):
+                # Update the distance to the minimum via an intermediate node
+                distanceArray[i][j] = min(
+                    distanceArray[i][j], distanceArray[i][k] + distanceArray[k][j]
+                )
+
+    return min(distanceArray[i][j] for i in range(num_nodes) for j in range(num_nodes) if i != j) # returns the heuristic value
+    # return distanceArray # returns the adyacency matrix with the minimum cost
+
+
+
 
 def main():
     startTime = time.time() # Start the timer for the whole program
@@ -564,6 +636,7 @@ def main():
     _, planeValues ,map = process_file(filename)
     heuristicType = int(sys.argv[2])
 
+<<<<<<< HEAD
     # Get planePositions and planeGoals
     planeInitialPositions = []
     planeGoals= []
@@ -599,7 +672,32 @@ def main():
     # Create output files
     if not (create_output_files(filename,totalTime,makespan,heuristicType,initialHeuristic,expandedNodes,solutionMoves,solutionPoints)):
         print_d("WARNING -- Output files not properly created")
+=======
+    ## --- ALGORITHM
+    ## Create the initial state with the given data
+    #initialState = State(planeValues[0], None, 0,heuristicType,map,planeValues[1])
+    #startASTARTime=time.time() # Start the timer for the A* algorithm
+    #initialHeuristic, expandedNodes,finalState= astar([initialState])
+    #makespan,solutionPoints,solutionMoves = get_parse_solution(finalState)
+    #endTime=time.time() # Stop all timers
+    ## Time calculations
+    #totalASTARTime = endTime- startASTARTime
+    #totalTime = endTime - startTime
+    ## --- ALGORITHM
+    #
+    ## Print results
+    #print_d(f"Total time: {totalTime}")
+    #print_d(f"Total ASTAR time: {totalASTARTime}")
+    #print_d(f"Makespan: {makespan}")
+    #print_d(f"Heuristic Type: {heuristicType}")
+    #print_d(f"Initial Heuristic: {initialHeuristic}")
+    #print_d(f"Expanded Nodes: {expandedNodes}")
+#
+    ## Create output files
+    #create_output_files(filename,totalTime,makespan,heuristicType,initialHeuristic,expandedNodes,solutionMoves,solutionPoints)
+>>>>>>> c0e4fab5a66684bfc4444eac2911bf74b065ddb5
 
+    heuristic_floydWarshall(map)
 
 
 if __name__ == "__main__":
