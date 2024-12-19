@@ -2,7 +2,6 @@ import os
 import re
 import sys
 import time
-import math
 
 
 #TODO: Think about base cases and hot to save time by using them
@@ -200,7 +199,7 @@ class State:
         if self.heuristicType == 1:
             return self.heuristic_manhattan()
         elif self.heuristicType == 2:
-            return self.heuristic_euclidean()
+            return self.heuristic_euler()
         else:
             print_d("ERROR: Invalid heuristic type")
             return 0
@@ -244,26 +243,7 @@ class State:
             heuristicValues.append(abs(final[0] - initial[0]) + abs(final[1] - initial[1]))
         return max(heuristicValues)
 
-    def heuristic_euclidean(self)-> float:
-        """
-        Compute the euclidean distance between the
-        current position and the goal position of each plane.
-        :return (float): Heuristic value
-        """
-        heuristicsValues = []
-        for i in range(len(self.planePositions)):
-            initial = self.planePositions[i]
-            final = self.planeGoals[i]
-            heuristicsValues.append(math.sqrt((final[0] - initial[0])**2 + (final[1] - initial[1])**2))
-        return max(heuristicsValues)
-    
-    def heuristic_floydWarshall(self)-> float:
-        """
-        Compute the Floyd-Warshall algorithm, used for
-        calculating the optimal cost between a couple of
-        edges.
-        :return (float): Heuristic value
-        """
+    def heuristic_euler(self)-> float:
         return 0
 
     def condition_free(self,values:list[tuple[int,int]])-> bool:
@@ -456,8 +436,7 @@ def astar(open:list[State],closed:list[State]= [],goal:bool =False) -> tuple[flo
             for elem in open: 
                 if not(closed.count(elem) >= 1):
                     currentState:State = elem 
-                    print_d(f"NOTE -- Current State: \n {currentState}\n")
-                    
+                    break
         else:
             print_d("WARNING -- No more states to expand")
             break
@@ -467,7 +446,7 @@ def astar(open:list[State],closed:list[State]= [],goal:bool =False) -> tuple[flo
             goal = True
             break
 
-        elif expandedNodes > 10:
+        elif expandedNodes > 2000:
             print_d("WARNING -- Too many expanded nodes")
             break
         else:

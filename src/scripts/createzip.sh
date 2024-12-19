@@ -32,8 +32,8 @@ cp ../../autores.txt ./autores.txt 2>> $LOG \
 # Parte 1
 cp ../../parte-1/CSP-tests/* ./parte-1/CSP-tests/ 2>> $LOG  \
     || echo "ERROR al copiar los tests de la parte 1"
-cp ../../parte-1/ESPMaintenance.py ./parte-1/ESPMaintenance.py >& $LOG \
-    || echo "ERROR al copiar ESPMaintenance.py"
+cp ../../parte-1/CSPMaintenance.py ./parte-1/CSPMaintenance.py >& $LOG \
+    || echo "ERROR al copiar CSPMaintenance.py"
 cp ../../parte-1/CSP-calls.sh ./parte-1/CSP-calls.sh 2>> $LOG \
     || echo "ERROR al copiar CSP-calls.sh"
 # Parte 2

@@ -1,0 +1,1 @@
+cp: ../../parte-2/ASTAR-tests/output/*: No such file or directory
