@@ -17,7 +17,7 @@ for csv_file in ASTAR-tests/*.csv; do
         echo -e "-----------------------------\n"
         echo "CALLS --- heuristicType: 2"
         # Run ASTARRodaje.py with parameter 2
-        python3 ASTARRodaje.py "$csv_file" 2
+        #python3 ASTARRodaje.py "$csv_file" 2
         
         echo -e "------------------------\n\n"
     fi

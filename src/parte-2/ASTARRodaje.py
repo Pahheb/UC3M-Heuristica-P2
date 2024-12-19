@@ -213,7 +213,8 @@ class State:
             return self.heuristic_manhattan()
         # Use manhattan
         elif self.heuristicType == 2:
-            return self.heuristic_euler()
+            return self.heuristic_manhattan()
+            #return self.heuristic_euler()
         # Use dikstra
         elif self.heuristicType == 0:
             return 0
@@ -502,26 +503,56 @@ def astar(open:list[State],closed:list[State]= [],goal:bool =False) -> tuple[flo
 #TODO: El código repite la creación de una lista de movimientos para luego reinterpretarla en 
 # el método de create_output_files. Se podría eliminar uno de esos dos.
 
-def get_parse_solution(finalState:State) -> tuple[float,list[list[tuple[int,int]]],list[list[str]]]:
+def get_parse_solution(final_state: State) -> tuple[int, list[list[tuple[int, int]]], list[list[str]]]:
     """
-    This function returns the solution of the problem as:
-    :return (int): Makespan of the solution
-    :return (list): List of points for each plane
-    :return (list): List of moves for each plane
+    Reconstructs the solution path from the final state by backtracking.
+    
+    Args:
+        final_state: The goal state reached by A*
+        
+    Returns:
+        tuple: (makespan, list of position sequences, list of move sequences)
     """
-    state = finalState
-    states = [finalState]
+    # Initialize tracking for each plane
+    num_planes = len(final_state.planePositions)
+    position_sequences = [[] for _ in range(num_planes)]
+    move_sequences = [[] for _ in range(num_planes)]
+    
+    # Backtrack through states
+    current_state = final_state
     makespan = 0
-    planesMovePoints:list[list[tuple[int,int]]] = []
-    planesMoveDirections:list[list[str]] = []
-
-    while state.prev:
-        states.append(state.prev)
-        state = state.prev
-    makespan = len(states)
-    for state in states:
-        print_d(state)
-    return makespan,planesMovePoints,planesMoveDirections
+    
+    while current_state:
+        # Record positions for each plane
+        for i in range(num_planes):
+            position_sequences[i].insert(0, current_state.planePositions[i])
+            
+        # Determine moves by comparing consecutive states
+        if current_state.prev:
+            makespan += 1
+            for i in range(num_planes):
+                current_pos = current_state.planePositions[i]
+                prev_pos = current_state.prev.planePositions[i]
+                
+                # Calculate move direction
+                dx = current_pos[0] - prev_pos[0]
+                dy = current_pos[1] - prev_pos[1]
+                
+                # Convert to move symbol
+                if (dx, dy) == (0, 0):
+                    move_sequences[i].insert(0, "w")
+                elif (dx, dy) == (0, 1):
+                    move_sequences[i].insert(0, "→")
+                elif (dx, dy) == (0, -1):
+                    move_sequences[i].insert(0, "←")
+                elif (dx, dy) == (1, 0):
+                    move_sequences[i].insert(0, "↓")
+                elif (dx, dy) == (-1, 0):
+                    move_sequences[i].insert(0, "↑")
+                    
+        current_state = current_state.prev
+        
+    return makespan, position_sequences, move_sequences
 
 
 def main():
@@ -565,9 +596,7 @@ def main():
     print_d(output)
 
     # Create output files
-    solutionTestMoves = [["↓", "→"], ["←", "↑","w"]]
-    solutionTestPoints = [[(2,3),(2,3),(2,3)],[(2,3),(2,3),(2,3),(2,3)]]
-    if not (create_output_files(filename,totalTime,makespan,heuristicType,initialHeuristic,expandedNodes,solutionTestMoves,solutionTestPoints)):
+    if not (create_output_files(filename,totalTime,makespan,heuristicType,initialHeuristic,expandedNodes,solutionMoves,solutionPoints)):
         print_d("WARNING -- Output files not properly created")
 
 
