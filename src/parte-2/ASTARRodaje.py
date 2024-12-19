@@ -186,8 +186,8 @@ class State:
             cost:float,
             heuristicType:int,
             map:dict[tuple[int,int],str],
-            planeGoals:list[tuple[int,int]]
-            
+            planeGoals:list[tuple[int,int]],
+            fwCosts: dict[tuple[int, int], dict[tuple[int, int], float]]|None = None,
             ):
 
         self.planePositions= planePositions
@@ -196,6 +196,7 @@ class State:
         self.heuristicType = heuristicType
         self.map = map
         self.planeGoals= planeGoals 
+        self.fwCosts = fwCosts
 
     def __str__(self) -> str:
         string = (f"State:\n\
@@ -211,11 +212,11 @@ class State:
     @property
     def heuristicCost(self) -> float:
         # Use euler
-        if self.heuristicType == 1:
+        if self.heuristicType == 2:
             return self.heuristic_manhattan()
         # Use manhattan
-        elif self.heuristicType == 2:
-            return self.heuristic_euclidean()
+        elif self.heuristicType == 1:
+            return self.heuristic_floydWarshall()
             #return self.heuristic_euler()
         # Use dikstra
         elif self.heuristicType == 0:
@@ -282,12 +283,87 @@ class State:
     
     def heuristic_floydWarshall(self)-> float:
         """
-        Compute the Floyd-Warshall algorithm, used for
-        calculating the optimal cost between a couple of
-        edges.
+        Compute the Floyd-Warshall algorithm if this node is the 
+        first one. Else use the precalculated values.
         :return (float): Heuristic value
         """
-        return 0
+        if self.fwCosts == None:
+            self.fwCosts = self.algorithm_floydWarshall()
+        heuristicValues = []
+        for i in range(len(self.planePositions)):
+            initial = self.planePositions[i]
+            final = self.planeGoals[i]
+            heuristicCost = self.fwCosts[initial][final]
+            heuristicValues.append(heuristicCost)
+
+        return max(heuristicValues)
+
+    def algorithm_floydWarshall(self) -> dict[tuple[int, int], dict[tuple[int, int], float]]:
+        """
+        Compute the Floyd-Warshall algorithm with wall detection.
+        Nodes are considered adjacent only if they are Manhattan distance 1 apart
+        and at least one of them is not a wall ("G").
+        :return (dict): Dictionary mapping each position to its minimum distances to all other positions
+        """
+        # Get the map from the instance
+        map = self.map
+        
+        # Initialize the mapping from node indices to their positions
+        n = 1
+        nodes = {}  # Maps index to position
+        reverse_nodes = {}  # Maps position to index (needed for result conversion)
+        for i in map.keys():
+            nodes[n] = i
+            reverse_nodes[i] = n
+            n += 1
+        num_nodes = len(nodes)
+        
+        # Initialize the distance matrix with infinities
+        distanceArray = [[float('inf')] * num_nodes for _ in range(num_nodes)]
+        
+        # Distance from a node to itself is 0
+        for i in range(num_nodes):
+            distanceArray[i][i] = 0
+            
+        # Populate the adjacency matrix
+        for i in range(1, num_nodes + 1):
+            for j in range(1, num_nodes + 1):
+                if i != j:
+                    pos_i = nodes[i]
+                    pos_j = nodes[j]
+                    
+                    # Check if positions are adjacent (Manhattan distance of 1)
+                    manhattan_dist = abs(pos_i[0] - pos_j[0]) + abs(pos_i[1] - pos_j[1])
+                    
+                    if manhattan_dist == 1:
+                        # Check if at least one position is not a wall
+                        if map[pos_i] != "G" and map[pos_j] != "G":
+                            distanceArray[i - 1][j - 1] = 1
+                        else:
+                            distanceArray[i-1][j-1] = float('inf')
+        
+        # Floyd-Warshall algorithm
+        for k in range(num_nodes):
+            for i in range(num_nodes):
+                for j in range(num_nodes):
+                    # Update the distance to the minimum via an intermediate node
+                    distanceArray[i][j] = min(
+                        distanceArray[i][j], 
+                        distanceArray[i][k] + distanceArray[k][j]
+                    )
+        
+        # Convert the result matrix to a dictionary
+        result_dict = {}
+        for i in range(1, num_nodes + 1):
+            pos_i = nodes[i]
+            # Create inner dictionary for each position
+            distances_from_i = {}
+            for j in range(1, num_nodes + 1):
+                pos_j = nodes[j]
+                distances_from_i[pos_j] = distanceArray[i-1][j-1]
+            result_dict[pos_i] = distances_from_i
+        
+        return result_dict
 
     def condition_free(self,values:list[tuple[int,int]])-> bool:
         """
@@ -462,7 +538,7 @@ class State:
             childCosts.append(self.get_child_cost(elem))
 
         for i in range(len(childPositionValues)):
-            childStates.append(State(childPositionValues[i],self,self.cost + childCosts[i],self.heuristicType,self.map,self.planeGoals))
+            childStates.append(State(childPositionValues[i],self,self.cost + childCosts[i],self.heuristicType,self.map,self.planeGoals,self.fwCosts))
 
         # NOTE: Use the sorted function to sort based on total cost of objects of the class.
         return sorted(childStates, key=lambda x: x.totalCost)
@@ -575,61 +651,6 @@ def get_parse_solution(final_state: State) -> tuple[int, list[list[tuple[int, in
         
     return makespan, position_sequences, move_sequences
 
-def heuristic_floydWarshall(map: dict) -> list[list[float]]:
-    """
-    Compute the Floyd-Warshall algorithm with wall detection.
-    Nodes are considered adjacent only if they are Manhattan distance 1 apart
-    and at least one of them is not a wall ("G").
-    
-    Args:
-        map (dict): Dictionary where keys are coordinate tuples and values are cell types
-        
-    Returns:
-        list[list[float]]: Distance matrix with minimum costs between nodes
-    """
-    # Initialize the mapping from node indices to their positions
-    n = 1
-    nodes = {}
-    for i in map.keys():
-        nodes[n] = i
-        n += 1
-    num_nodes = len(nodes)
-    
-    # Initialize the distance matrix with infinities
-    distanceArray = [[float('inf')] * num_nodes for _ in range(num_nodes)]
-    
-    # Distance from a node to itself is 0
-    for i in range(num_nodes):
-        distanceArray[i][i] = 0
-        
-    # Populate the adjacency matrix
-    for i in range(1, num_nodes + 1):
-        for j in range(1, num_nodes + 1):
-            if i != j:
-                pos_i = nodes[i]
-                pos_j = nodes[j]
-                
-                # Check if positions are adjacent (Manhattan distance of 1)
-                manhattan_dist = abs(pos_i[0] - pos_j[0]) + abs(pos_i[1] - pos_j[1])
-                
-                if manhattan_dist == 1:
-                    # Check if at least one position is not a wall
-                    if map[pos_i] != "G" and map[pos_j] != "G":
-                        distanceArray[i - 1][j - 1] = 1
-                    else:
-                        distanceArray[i-1][j-1] = float('inf')
-    
-    # Floyd-Warshall algorithm
-    for k in range(num_nodes):
-        for i in range(num_nodes):
-            for j in range(num_nodes):
-                # Update the distance to the minimum via an intermediate node
-                distanceArray[i][j] = min(
-                    distanceArray[i][j], 
-                    distanceArray[i][k] + distanceArray[k][j]
-                )
-                
-    return distanceArray  # returns the adjacency matrix with the minimum cost
 
 
 def main():
@@ -676,8 +697,6 @@ def main():
     if not (create_output_files(filename,totalTime,makespan,heuristicType,initialHeuristic,expandedNodes,solutionMoves,solutionPoints)):
         print_d("WARNING -- Output files not properly created")
     
-    # Print floydWarshall heuristic
-    print_d(f"HEURISTIC FLOYD-WARSHALL: {heuristic_floydWarshall_2(map)}")
 
 
 if __name__ == "__main__":
