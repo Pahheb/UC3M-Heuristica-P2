@@ -520,16 +520,27 @@ def heuristic_floydWarshall(map: dict)-> float:
         nodes[n] = i
         n += 1
 
-    print(nodes, "\n")
+    num_nodes = len(nodes)
 
-    for i in range(len(nodes)):
-        distanceArray.append([])
-        for j in range(len(nodes)):
-            if i == j:
-                distanceArray[i].append([0])
-            else:
-                distanceArray[i].append([])
+    # Initialize the distance matrix with infinities
+    distanceArray = [[float('inf')] * num_nodes for _ in range(num_nodes)]
 
+    # Distance from a node to itself is 0
+    for i in range(num_nodes):
+        distanceArray[i][i] = 0
+
+    # Populate the adjacency matrix
+    for i in range(1, num_nodes, 1):
+        for j in range(1, num_nodes, 1):
+            if i != j:
+                # Get positions of the nodes
+                print(i, j)
+                pos_i = nodes[i]
+                pos_j = nodes[j]
+
+                # Check if positions are adjacent (Manhattan distance of 1)
+                if abs(pos_i[0] - pos_j[0]) + abs(pos_i[1] - pos_j[1]) == 1:
+                    distanceArray[i][j] = 1
     for i in distanceArray:
         print(i, "\n")
 
@@ -543,29 +554,30 @@ def main():
     _, planeValues ,map = process_file(filename)
     heuristicType = int(sys.argv[2])
 
-    # --- ALGORITHM
-    # Create the initial state with the given data
-    initialState = State(planeValues[0], None, 0,heuristicType,map,planeValues[1])
-    startASTARTime=time.time() # Start the timer for the A* algorithm
-    initialHeuristic, expandedNodes,finalState= astar([initialState])
-    makespan,solutionPoints,solutionMoves = get_parse_solution(finalState)
-    endTime=time.time() # Stop all timers
-    # Time calculations
-    totalASTARTime = endTime- startASTARTime
-    totalTime = endTime - startTime
-    # --- ALGORITHM
-    
-    # Print results
-    print_d(f"Total time: {totalTime}")
-    print_d(f"Total ASTAR time: {totalASTARTime}")
-    print_d(f"Makespan: {makespan}")
-    print_d(f"Heuristic Type: {heuristicType}")
-    print_d(f"Initial Heuristic: {initialHeuristic}")
-    print_d(f"Expanded Nodes: {expandedNodes}")
+    ## --- ALGORITHM
+    ## Create the initial state with the given data
+    #initialState = State(planeValues[0], None, 0,heuristicType,map,planeValues[1])
+    #startASTARTime=time.time() # Start the timer for the A* algorithm
+    #initialHeuristic, expandedNodes,finalState= astar([initialState])
+    #makespan,solutionPoints,solutionMoves = get_parse_solution(finalState)
+    #endTime=time.time() # Stop all timers
+    ## Time calculations
+    #totalASTARTime = endTime- startASTARTime
+    #totalTime = endTime - startTime
+    ## --- ALGORITHM
+    #
+    ## Print results
+    #print_d(f"Total time: {totalTime}")
+    #print_d(f"Total ASTAR time: {totalASTARTime}")
+    #print_d(f"Makespan: {makespan}")
+    #print_d(f"Heuristic Type: {heuristicType}")
+    #print_d(f"Initial Heuristic: {initialHeuristic}")
+    #print_d(f"Expanded Nodes: {expandedNodes}")
+#
+    ## Create output files
+    #create_output_files(filename,totalTime,makespan,heuristicType,initialHeuristic,expandedNodes,solutionMoves,solutionPoints)
 
-    # Create output files
-    create_output_files(filename,totalTime,makespan,heuristicType,initialHeuristic,expandedNodes,solutionMoves,solutionPoints)
-
+    heuristic_floydWarshall(map)
 
 
 if __name__ == "__main__":
