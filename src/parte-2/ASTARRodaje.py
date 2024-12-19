@@ -11,6 +11,7 @@ OUTDIR = "./ASTAR-tests/outputs"
 # NOTE: The OUTDIR for development is different form the delivery one
 # OUTDIR = "./ASTAR-tests/"
 DEBUG = True
+MAXEXPANSION = 100000
 
 
 
@@ -475,7 +476,7 @@ def astar(open:list[State],closed:list[State]= [],goal:bool =False) -> tuple[flo
         if currentState in closed:
             continue
         
-        if expandedNodes > 20000:
+        if MAXEXPANSION and expandedNodes >= MAXEXPANSION:
             break
 
         successors = currentState.expand_state()
