@@ -501,21 +501,16 @@ def get_parse_solution(final_state:State) -> tuple[int,list[list[tuple[int,int]]
     """
     return  0,[[]],[]
 
-def heuristic_floydWarshall(map: dict)-> float:
+def heuristic_floydWarshall(map: dict) -> float:
     """
     Compute the Floyd-Warshall algorithm, used for
     calculating the optimal cost between a couple of
     edges.
     :return (float): Heuristic value
     """
-    print_d(map)
-
-    distanceArray = [] # init of distance vector
-
-    # init of a graph adyacency matrix
+    # Initialize the mapping from node indices to their positions
     n = 1
     nodes = {}
-
     for i in map.keys():
         nodes[n] = i
         n += 1
@@ -530,21 +525,30 @@ def heuristic_floydWarshall(map: dict)-> float:
         distanceArray[i][i] = 0
 
     # Populate the adjacency matrix
-    for i in range(1, num_nodes, 1):
-        for j in range(1, num_nodes, 1):
+    for i in range(1, num_nodes + 1):  # Adjusting range to match nodes
+        for j in range(1, num_nodes + 1):
             if i != j:
-                # Get positions of the nodes
-                print(i, j)
                 pos_i = nodes[i]
                 pos_j = nodes[j]
 
                 # Check if positions are adjacent (Manhattan distance of 1)
                 if abs(pos_i[0] - pos_j[0]) + abs(pos_i[1] - pos_j[1]) == 1:
-                    distanceArray[i][j] = 1
-    for i in distanceArray:
-        print(i, "\n")
+                    distanceArray[i - 1][j - 1] = 1  # Adjust for zero-based indexing
 
-    return 0
+    # Floyd-Warshall algorithm
+    for k in range(num_nodes):
+        for i in range(num_nodes):
+            for j in range(num_nodes):
+                # Update the distance to the minimum via an intermediate node
+                distanceArray[i][j] = min(
+                    distanceArray[i][j], distanceArray[i][k] + distanceArray[k][j]
+                )
+
+    return min(distanceArray[i][j] for i in range(num_nodes) for j in range(num_nodes) if i != j) # returns the heuristic value
+    # return distanceArray # returns the adyacency matrix with the minimum cost
+
+
+
 
 def main():
     startTime = time.time() # Start the timer for the whole program
