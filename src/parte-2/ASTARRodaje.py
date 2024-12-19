@@ -8,11 +8,20 @@ import math
 
 # GLOBAL VARIABLES:
 SOLDICT = {(0,-1):"↓",(-1,0): "→", (1,0):"←", (0,1):"↑",(0,0): "w"}
-OUTDIR = "./ASTAR-tests/outputs"
-# NOTE: The OUTDIR for development is different form the delivery one
-# OUTDIR = "./ASTAR-tests/"
+
+# NOTE: If on debug mode:
+    #the program will print more information and behave differently
 DEBUG = True
-MAXEXPANSION = 100000
+if DEBUG:
+    # max number of expanded nodes when debugging
+    MAXEXPANSION = 100000
+    # max time in seconds when debugging
+    MAXTIME = 100
+    OUTDIR = "./ASTAR-tests/outputs"
+else:
+    MAXEXPANSION = None
+    MAXTIME = None
+    OUTDIR = "./ASTAR-tests/"
 
 
 
@@ -28,7 +37,7 @@ def print_d(data):
 def process_file(filename: str) -> tuple[int, dict[int,list], dict[tuple,str]]:
     """
     This function processes a file with the format
-specified and returns a tuple with the data.
+    specified and returns a tuple with the data.
     :return (int): Number of planes -> planeNumber
     :return (dict): Each plane initial and final position. -> planeValues
     :return (dict): Map of the aeroport. Each tile with its contents -> map
@@ -83,8 +92,24 @@ specified and returns a tuple with the data.
         # Check that forall planes: initial and goal values are valid
         for key in planeValues:
             startGoal = planeValues[key]
-            if map.get(startGoal[0]) and map.get(startGoal[1]) and (map[startGoal[0]] == "G" or map[startGoal[1]] =="G"):
-                print_d(f"ERROR: {filename} -> Invalid initial or goal value for plane {key}")
+            # The initial and goal values must be inside the map and not be "G" values
+            if not(map.get(startGoal[0]) and map.get(startGoal[1])):
+                print_d(f"ERROR: {filename} -> Invalid initial or goal value for plane {key}: Not in map")
+                sys.exit(1)
+            if  map[startGoal[0]] == "G" or map[startGoal[1]] =="G":
+                print_d(f"ERROR: {filename} -> Invalid initial or goal value for plane {key}: Goal or initial position is a wall")
+                sys.exit(1)
+
+            # No two planes can have the same initial values
+            # No two palnes can have the same goal values
+            for key2 in planeValues:
+                if key != key2:
+                    if planeValues[key] == planeValues[key2]:
+                        print_d(f"ERROR: {filename} -> Plane {key} and Plane {key2} have the same initial and goal values")
+                        sys.exit(1)
+                    elif planeValues[key][0] == planeValues[key2][0] or planeValues[key][1] == planeValues[key2][1]:
+                        print_d(f"ERROR: {filename} -> Plane {key} and Plane {key2} have the same initial or goal values")
+                        sys.exit(1)
 
 
         print_d(f"NOTE -- File {filename} processed correctly:\n \
@@ -208,6 +233,9 @@ class State:
 
         return string
 
+    def __eq__(self, other) -> bool:
+        return self.planePositions == other.planePositions
+
 
     @property
     def heuristicCost(self) -> float:
@@ -248,7 +276,7 @@ class State:
 
     @property
     def waitCost(self) -> float:
-        return 0.5
+        return 2
     @property
     def moveCost(self) ->float:
         return 1
@@ -376,6 +404,7 @@ class State:
         for elem in values:
             if self.map[elem] == "G":
                 return False
+
         return True
 
     def condition_in_map(self,values:list[tuple[int,int]])-> bool:
@@ -497,25 +526,19 @@ class State:
                 newPosition = moves[i][0] + self.planePositions[i][0],moves[i][1] + self.planePositions[i][1]
                 positions.append(newPosition)
 
-            # Check conditions:
-            #print_d(f"MOVES_PRE: {moves}")
-            #print_d(f"POS_PRE: {positions}")
+
+            # Check conditions: 
             if self.condition_in_map(positions):
-                #print_d(f"MOVES_MAP: {moves}")
-                #print_d(f"POS_MAP: {positions}")
-                if self.condition_free(positions):
-                    #print_d(f"MOVES_FREE: {moves}")
-                    #print_d(f"POS_FREE: {positions}")
-                    if self.condition_same_position(positions):
-                        #print_d(f"MOVES_SAME: {moves}")
-                        #print_d(f"POS_SAME: {positions}")
-                        if self.condition_wait(positions):
-                            #print_d(f"MOVES_WAIT: {moves}")
-                            #print_d(f"POS_WAIT: {positions}")
-                            if self.condition_cross(positions):
-                                result[0].append(positions)
-                                result[1].append(moves)
-                                #print_d(f"MOVES_POST: {moves}")
+                conditions =[
+                    self.condition_free(positions),
+                    self.condition_same_position(positions),
+                    self.condition_cross(positions),
+                    self.condition_wait(positions)
+                ]
+                if all(conditions):
+                    result[0].append(positions)
+                    result[1].append(moves)
+
         return result
    
 
@@ -545,7 +568,7 @@ class State:
 
     
 
-def astar(open:list[State],closed:list[State]= [],goal:bool =False) -> tuple[float,int,State]:
+def astar(initialState:State) -> tuple[float,int,State]:
     """
     This function implements the A* algorithm. 
     :param open: Open list of states. Starts with the initial state
@@ -556,39 +579,50 @@ def astar(open:list[State],closed:list[State]= [],goal:bool =False) -> tuple[flo
     :return (State): Final state of the problem: Backtrack to get the solution
         -> The get_parse_solution() function will be used to get the solution
     """
+    initialTime = time.time()
 
+    # Initialize function variables
+    open = [initialState]
+    closed = []
+    goal = False
     expandedNodes = 0
     currentState:State = open[0]
     initialHeuristic = currentState.heuristicCost
     
-    while len(open) >= 1  or goal:
+    while len(open) > 0:
         currentState = open.pop(0)
         
         if currentState.finalState:
-            print_d("NOTE -- Goal reached")
             goal = True
             break
 
         if currentState in closed:
             continue
+
+        closed.append(currentState)
         
-        if MAXEXPANSION and expandedNodes >= MAXEXPANSION:
+        if (MAXEXPANSION and expandedNodes >= MAXEXPANSION) \
+            or (MAXTIME and time.time()-initialTime >= MAXTIME):
             break
+
 
         successors = currentState.expand_state()
         open = sorted(open + successors, key=lambda x: x.totalCost)
         expandedNodes += 1
+
+        # DEBUG:
+        print_d(f"DEBUG -- OPEN: {len(open)} CLOSED: {len(closed)} SUCCESSORS: {len(successors)}")
         print_d(f"NOTE -- Expanded Nodes: {expandedNodes}")
-        sys.stdout.write("\033[F") # Cursor up one line
-        sys.stdout.write("\033[K") # Clear to the end of line
+        print_d(f"NOTE -- Time expended: {round(time.time()-initialTime,3)}")
+        sys.stdout.write("\033[F\033[K\033[F\033[K\033[F\033[K")  # Clear debug lines
                     
 
     if goal:
-        print_d(f"NOTE -- Finished A* algorithm") 
+        print(f"NOTE -- FINISHED A* ALGORITHM") 
         return initialHeuristic,expandedNodes,currentState
 
     elif len(open) == 0:
-        print_d(f"WARNING -- NO SOLUTIONS FOUND WITH {expandedNodes} EXPANDED NODES")
+        print(f"NOTE -- NO SOLUTIONS FOUND FOR A* ALGORITHM")
         sys.exit(1)
 
     else:
@@ -597,8 +631,6 @@ def astar(open:list[State],closed:list[State]= [],goal:bool =False) -> tuple[flo
 
 
 
-#TODO: El código repite la creación de una lista de movimientos para luego reinterpretarla en 
-# el método de create_output_files. Se podría eliminar uno de esos dos.
 
 def get_parse_solution(final_state: State) -> tuple[int, list[list[tuple[int, int]]], list[list[str]]]:
     """
@@ -658,7 +690,7 @@ def main():
 
     # Get and parse the input file
     filename = sys.argv[1]
-    _, planeValues ,map = process_file(filename)
+    planeNumber, planeValues ,map = process_file(filename)
     heuristicType = int(sys.argv[2])
 
     # Get planePositions and planeGoals
@@ -672,7 +704,7 @@ def main():
     # Create the initial state with the given data
     initialState = State(planeInitialPositions, None, 0,heuristicType,map,planeGoals)
     startASTARTime=time.time() # Start the timer for the A* algorithm
-    initialHeuristic, expandedNodes,finalState= astar([initialState])
+    initialHeuristic, expandedNodes,finalState= astar(initialState)
     makespan,solutionPoints,solutionMoves = get_parse_solution(finalState)
     endTime=time.time() # Stop all timers
     # Time calculations
@@ -683,6 +715,7 @@ def main():
     # Print results
     output = f"""\n
     --------------------
+    PlaneCount: {planeNumber}
     Total time: {totalTime} s 
     Total ASTAR time: {totalASTARTime} s
     Makespan: {makespan}
