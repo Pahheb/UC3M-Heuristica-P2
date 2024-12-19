@@ -501,6 +501,39 @@ def get_parse_solution(final_state:State) -> tuple[int,list[list[tuple[int,int]]
     """
     return  0,[[]],[]
 
+def heuristic_floydWarshall(map: dict)-> float:
+    """
+    Compute the Floyd-Warshall algorithm, used for
+    calculating the optimal cost between a couple of
+    edges.
+    :return (float): Heuristic value
+    """
+    print_d(map)
+
+    distanceArray = [] # init of distance vector
+
+    # init of a graph adyacency matrix
+    n = 1
+    nodes = {}
+
+    for i in map.keys():
+        nodes[n] = i
+        n += 1
+
+    print(nodes, "\n")
+
+    for i in range(len(nodes)):
+        distanceArray.append([])
+        for j in range(len(nodes)):
+            if i == j:
+                distanceArray[i].append([0])
+            else:
+                distanceArray[i].append([])
+
+    for i in distanceArray:
+        print(i, "\n")
+
+    return 0
 
 def main():
     startTime = time.time() # Start the timer for the whole program
