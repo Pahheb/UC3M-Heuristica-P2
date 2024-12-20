@@ -270,14 +270,9 @@ def main():
     problem = Problem()
     logging.info("--- Creation of variable and domain asignation ---")
     for plane in planes:
-        if plane.t1_duties + plane.t2_duties == 0: # si no hay tareas, el avión siempre tiene que estar en un parking
-            for slot in range(slots):
-                variable_name = f"av_{plane.id}_{plane.model}_{slot + 1}"
-                problem.addVariable(variable_name, prk_formatted_positions)    
-        else:          
-            for slot in range(slots):
-                variable_name = f"av_{plane.id}_{plane.model}_{slot + 1}"
-                problem.addVariable(variable_name, planeDomain)
+        for slot in range(slots):
+            variable_name = f"av_{plane.id}_{plane.model}_{slot + 1}"
+            problem.addVariable(variable_name, planeDomain)
     
     # Restricción 1: En cada franja horaria (slot), ningún avión puede compartir la misma posición
     for slot in range(slots):
@@ -355,29 +350,6 @@ def main():
                 # Añadir la restricción para las variables del avión con tareas tipo 2
                 problem.addConstraint(enforce_task_order, variable)
     
-    # hay una restricción implicita que no hemos programado todavía: si hemos hecho todas las 
-    # tareas, nuestro avión solamente puede estacionarse en parkings (esto es una asunción, está mencionada en la práctica)
-    for plane in planes:
-        if plane.t1_duties + plane.t2_duties < slots:
-            restantes = slots - (plane.t1_duties + plane.t2_duties)
-            for i in range(restantes, slots + 1, 1):
-                variable = [f"av_{plane.id}_{plane.model}_{i}"]
-                def enforce_parking(*args):
-                    """
-                    Función de restricción: asegura que los aviones que tengan menos tareas que slots se asignen a posiciones 
-                    válidas de parkings cuando acaben de hacer todas sus tareas
-                    - args: las posibles asignaciones de valores ((i, j),) para las variables.
-                    """
-                    # Extraer las posiciones válidas (i, j)
-                    positions = [val for val in args if val is not None]
-                    for pos in positions:
-                        if pos in prk_formatted_positions:
-                            # si la posición existe en los talleres especialistas, hemos acabado
-                            return True
-                    return False
-
-                problem.addConstraint(enforce_parking, variable)
-
     # Restricción 5: Ningún par de aviones puede estar en posiciones adyacentes en la misma franja horaria
     for slot in range(slots):
         # for each slot, generate al JMB plane variables
