@@ -16,7 +16,7 @@ if DEBUG:
     # max number of expanded nodes when debugging
     MAXEXPANSION = 100000
     # max time in seconds when debugging
-    MAXTIME = 100
+    MAXTIME = 300
     OUTDIR = "./ASTAR-tests/outputs"
 else:
     MAXEXPANSION = None
@@ -112,8 +112,7 @@ def process_file(filename: str) -> tuple[int, dict[int,list], dict[tuple,str]]:
                         sys.exit(1)
 
 
-        print_d(f"NOTE -- File {filename} processed correctly:\n \
-            \n * PLANES:{planeNumber} \n * VALUES: {planeValues} \n * MAP:{map} \n \n")
+        print_d(f"NOTE -- File {filename} processed correctly")
 
         return planeNumber, planeValues, map
 
@@ -245,7 +244,8 @@ class State:
         # Use manhattan
         elif self.heuristicType == 1:
             return self.heuristic_floydWarshall()
-            #return self.heuristic_euler()
+        elif self.heuristicType == 3:
+            return self.heuristic_euclidean()
         # Use dikstra
         elif self.heuristicType == 0:
             return 0
@@ -568,7 +568,7 @@ class State:
 
     
 
-def astar(initialState:State) -> tuple[float,int,State]:
+def astar(initialState:State) -> tuple[float,int,State,bool]:
     """
     This function implements the A* algorithm. 
     :param open: Open list of states. Starts with the initial state
@@ -614,16 +614,17 @@ def astar(initialState:State) -> tuple[float,int,State]:
         print_d(f"DEBUG -- OPEN: {len(open)} CLOSED: {len(closed)} SUCCESSORS: {len(successors)}")
         print_d(f"NOTE -- Expanded Nodes: {expandedNodes}")
         print_d(f"NOTE -- Time expended: {round(time.time()-initialTime,3)}")
-        sys.stdout.write("\033[F\033[K\033[F\033[K\033[F\033[K")  # Clear debug lines
+        if DEBUG:
+            sys.stdout.write("\033[F\033[K\033[F\033[K\033[F\033[K")  # Clear debug lines
                     
 
     if goal:
         print(f"NOTE -- FINISHED A* ALGORITHM") 
-        return initialHeuristic,expandedNodes,currentState
+        return initialHeuristic,expandedNodes,currentState,True
 
     elif len(open) == 0:
         print(f"NOTE -- NO SOLUTIONS FOUND FOR A* ALGORITHM")
-        sys.exit(1)
+        return initialHeuristic,expandedNodes,currentState,False
 
     else:
         print_d(f"WARNING -- EXITED A*")
@@ -704,9 +705,16 @@ def main():
     # Create the initial state with the given data
     initialState = State(planeInitialPositions, None, 0,heuristicType,map,planeGoals)
     startASTARTime=time.time() # Start the timer for the A* algorithm
-    initialHeuristic, expandedNodes,finalState= astar(initialState)
-    makespan,solutionPoints,solutionMoves = get_parse_solution(finalState)
-    endTime=time.time() # Stop all timers
+    initialHeuristic, expandedNodes,finalState,foundSolution= astar(initialState)
+
+    if foundSolution:
+        makespan,solutionPoints,solutionMoves = get_parse_solution(finalState)
+    else:
+        makespan = -1
+        solutionPoints = []
+        solutionMoves = []
+
+    endTime=time.time()
     # Time calculations
     totalASTARTime = endTime- startASTARTime
     totalTime = endTime - startTime

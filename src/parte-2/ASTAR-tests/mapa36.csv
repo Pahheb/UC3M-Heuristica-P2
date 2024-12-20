@@ -1,0 +1,15 @@
+3
+(0,0) (10,11)
+(0,11) (10,0)
+(10,11) (0,0)
+B;B;B;B;G;G;G;B;B;B;B;B
+B;A;B;B;G;G;G;B;B;A;B;B
+B;B;B;B;G;G;G;B;B;B;B;B
+B;B;G;B;B;B;B;B;G;B;B;B
+G;G;G;B;B;A;A;B;G;G;G;B
+G;G;G;B;A;B;B;A;G;G;G;B
+G;G;G;B;A;B;B;A;G;G;G;B
+B;B;B;B;B;A;A;B;B;B;B;B
+B;G;G;G;G;B;B;B;G;B;A;B
+B;G;B;B;G;G;G;B;B;B;G;A
+B;A;B;B;G;G;G;B;B;A;G;B
