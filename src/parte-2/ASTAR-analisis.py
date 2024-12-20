@@ -13,7 +13,7 @@ class Test:
     """
     def __init__(self, name: str, num_planes: int, map_tiles: int, 
                  total_time: float, initial_heuristic: int, 
-                 makespan: int, expanded_nodes: int):
+                 makespan: int, expanded_nodes: int, heuristic_type: str):
         self.name = name
         self.num_planes = num_planes
         self.map_tiles = map_tiles

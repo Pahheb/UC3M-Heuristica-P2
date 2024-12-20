@@ -595,6 +595,10 @@ def astar(initialState:State) -> tuple[float,int,State,bool]:
         if currentState.finalState:
             goal = True
             break
+        if currentState.heuristicCost == float('inf'):
+            print(f"NOTE -- NO SOLUTIONS FOUND FOR A* ALGORITHM")
+            return initialHeuristic,expandedNodes,currentState,False
+            break
 
         if currentState in closed:
             continue
